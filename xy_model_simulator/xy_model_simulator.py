@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use('Agg')  # 设置matplotlib使用非交互式后端
 import os
 import time
+import datetime
 from typing import Tuple, List, Optional, Dict, Any
 
 # 尝试导入CuPy进行GPU加速
@@ -20,14 +21,13 @@ try:
     gpu_available = True
 except ImportError:
     gpu_available = False
-    print("警告: CuPy未安装，无法使用GPU加速。将使用CPU进行计算。")
 
 
 class XYModelSimulator:
     """
     XY模型模拟器类：使用Swendsen-Wang算法进行蒙特卡洛模拟（GPU加速版）
     
-    该模拟器允许用户配置XY模型模拟的各种参数，并支持GPU加速以提高计算效率。
+    该模拟器支持CPU和GPU加速计算，能够高效计算不同温度下的物理量，如能量、磁化强度、比热和磁化率等。
     """
     
     def __init__(self, lattice_size: int = 16, equilibrium_steps: int = 1000, 
@@ -37,12 +37,12 @@ class XYModelSimulator:
         初始化XY模型模拟器
         
         参数:
-            lattice_size (int): 方形晶格的大小(LxL)。默认值: 16
-            equilibrium_steps (int): 用于系统平衡的蒙特卡洛步数。默认值: 1000
-            measurement_steps (int): 用于物理量测量的蒙特卡洛步数。默认值: 10000
-            interaction_constant (float): 交换相互作用常数J。默认值: 1.0
-            random_seed (int, optional): 用于结果重现的随机种子。默认值: None
-            use_gpu (bool): 是否使用GPU加速。默认值: True（如果可用）
+            lattice_size: 晶格尺寸(LxL)，默认值: 16
+            equilibrium_steps: 系统平衡步数，默认值: 1000
+            measurement_steps: 物理量测量步数，默认值: 10000
+            interaction_constant: 交换相互作用常数J，默认值: 1.0
+            random_seed: 随机种子，默认值: None
+            use_gpu: 是否使用GPU加速，默认值: True（如果可用）
         """
         # 确定是否使用GPU
         self.use_gpu = use_gpu and gpu_available
@@ -75,6 +75,19 @@ class XYModelSimulator:
         
         # 预计算周期性边界索引数组
         self._setup_boundary_arrays()
+        
+        # 生成唯一的结果文件夹名称（基于时间戳）
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.base_output_dir = f"simulation_results_{timestamp}"
+        
+        # 创建主结果文件夹
+        os.makedirs(self.base_output_dir, exist_ok=True)
+        
+        # 创建子文件夹
+        self.figures_dir = os.path.join(self.base_output_dir, "figures")
+        self.spin_dir = os.path.join(self.base_output_dir, "spin_configurations")
+        os.makedirs(self.figures_dir, exist_ok=True)
+        os.makedirs(self.spin_dir, exist_ok=True)
         
         print(f"XY模型模拟器初始化完成。计算设备: {self.device}，晶格尺寸: {self.L}x{self.L}")
     
@@ -380,10 +393,9 @@ class XYModelSimulator:
         cos_proj = np.cos(proj)
         sin_proj = np.sin(proj)
         
+        # 旋转回原始坐标系
         x_rot_new = ising_x_new * s_x
         y_rot_new = ising_y_new * s_y
-        
-        # 旋转回原始坐标系
         x_new = x_rot_new * cos_proj - y_rot_new * sin_proj
         y_new = x_rot_new * sin_proj + y_rot_new * cos_proj
         
@@ -454,8 +466,8 @@ class XYModelSimulator:
         在温度范围内运行XY模型模拟
         
         参数:
-            temperature_range: (T_min, T_max)温度范围。默认值: (0.1, 2.5)
-            num_temperatures: 温度点数量。默认值: 10
+            temperature_range: (T_min, T_max)温度范围，默认值: (0.1, 2.5)
+            num_temperatures: 温度点数量，默认值: 10
             
         返回:
             包含温度、能量、磁化强度等物理量的模拟结果字典
@@ -526,18 +538,13 @@ class XYModelSimulator:
             
             # 记录时间
             temperature_times[idx] = time.time() - temp_start
-            print(f"温度 {temp:.3f} 模拟完成，耗时 {temperature_times[idx]:.2f} 秒")
-        
+            
         # 总模拟时间
         total_time = time.time() - start_time
         self.timing_data = {
             'total_time': total_time,
-            'per_temperature_time': temperature_times.mean(),
-            'device': self.device
+            'per_temperature_time': temperature_times.mean()
         }
-        
-        print(f"模拟完成。总耗时: {total_time:.2f} 秒，平均每个温度点: {temperature_times.mean():.2f} 秒")
-        print(f"计算设备: {self.device}，性能提升: {self.timing_data.get('speedup', 'N/A')}x")
         
         # 存储结果
         self.results = {
@@ -549,6 +556,11 @@ class XYModelSimulator:
             'config': self.config.copy(),
             'timing': self.timing_data
         }
+        
+        # 自动生成所有输出
+        self.plot_results()
+        self.generate_spin_visualization()
+        self.save_results()
         
         return self.results
     
@@ -576,7 +588,7 @@ class XYModelSimulator:
         
         # 创建RGB彩色图像
         # 使用自旋角度映射到HSV色彩空间，然后转换为RGB
-        # 将角度从[0, 2π)映射到[0, 1)的色调值
+        # 将角度从[0, 2π)映射到[0, 1)的色调值，每0.5度一个色彩
         hue = (spin_config % (2 * np.pi)) / (2 * np.pi)
         
         # 使用磁化强度作为饱和度（归一化到[0.3, 1.0]）
@@ -589,7 +601,6 @@ class XYModelSimulator:
         hsv_image = np.stack([hue, saturation * np.ones_like(hue), value * np.ones_like(hue)], axis=2)
         
         # 将HSV转换为RGB
-        # 使用matplotlib的colors模块进行颜色空间转换
         from matplotlib.colors import hsv_to_rgb
         rgb_image = hsv_to_rgb(hsv_image)
         
@@ -612,7 +623,7 @@ class XYModelSimulator:
         plt.xlim(-0.5, self.L - 0.5)
         plt.ylim(-0.5, self.L - 0.5)
         
-        # 添加标题和物理量信息（英文）
+        # 添加标题和物理量信息
         title_text = f'XY Model Spin Configuration (Temperature = {temperature:.3f})'
         info_text = f'Magnetization: {magnetization:.4f}\nSusceptibility: {susceptibility:.4f}'
         
@@ -632,18 +643,10 @@ class XYModelSimulator:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
         plt.close()
     
-    def generate_spin_visualization(self, output_dir: str = 'spin_visualization') -> None:
-        """
-        生成所有温度点的自旋配置可视化图（彩色三通道图）
-        
-        参数:
-            output_dir: 图片保存目录。默认值: 'spin_visualization'
-        """
+    def generate_spin_visualization(self) -> None:
+        """生成所有温度点的自旋配置可视化图（彩色三通道图）"""
         if not self.spin_configurations:
             raise ValueError("未找到自旋配置数据。请先运行模拟。")
-        
-        # 创建输出目录
-        os.makedirs(output_dir, exist_ok=True)
         
         # 为每个温度点生成可视化图
         total = len(self.spin_configurations)
@@ -655,25 +658,16 @@ class XYModelSimulator:
             
             # 生成文件名
             filename = f'spin_config_T_{temp:.3f}.png'
-            output_path = os.path.join(output_dir, filename)
+            output_path = os.path.join(self.spin_dir, filename)
             
             # 可视化当前温度的自旋配置
             self._visualize_spin_configuration(spin_config, temp, magnetization, 
                                              susceptibility, output_path)
         
-        print(f"自旋可视化完成，共生成 {total} 张彩色图片，保存在 '{output_dir}' 文件夹中")
+        print(f"自旋可视化完成，共生成 {total} 张彩色图片，保存在 '{self.spin_dir}' 文件夹中")
     
-    def plot_results(self, save_plots: bool = True, output_dir: str = '.', 
-                   show_plots: bool = False, file_format: str = 'pdf') -> None:
-        """
-        绘制模拟结果并可选地保存到文件
-        
-        参数:
-            save_plots: 是否保存图表到文件。默认值: True
-            output_dir: 输出目录。默认值: 当前目录
-            show_plots: 是否显示图表。默认值: False
-            file_format: 保存图片的文件格式('pdf', 'png', 'jpg')。默认值: 'pdf'
-        """
+    def plot_results(self, file_format: str = 'pdf') -> None:
+        """绘制模拟结果并保存到文件"""
         if not self.results:
             raise ValueError("未找到模拟结果。请先运行模拟。")
         
@@ -683,74 +677,52 @@ class XYModelSimulator:
         susceptibility = self.results['susceptibility']
         specific_heat = self.results['specific_heat']
         
-        # 如果保存图片且输出目录不存在，则创建目录
-        if save_plots and not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
-        
-        # 绘制能量随温度变化图（英文标签）
+        # 绘制能量随温度变化图
         plt.figure()
         plt.plot(t, energy, 'rx-', linewidth=2)
         plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
         plt.ylabel(r'Average Energy per Site $(J)$', fontsize=12)
         plt.title('Energy vs Temperature', fontsize=14)
         plt.grid(True, alpha=0.3)
-        if save_plots:
-            plt.savefig(os.path.join(output_dir, f'energy_vs_temperature.{file_format}'), 
-                       format=file_format, bbox_inches='tight', dpi=300)
+        plt.savefig(os.path.join(self.figures_dir, f'energy_vs_temperature.{file_format}'), 
+                   format=file_format, bbox_inches='tight', dpi=300)
         
-        # 绘制比热随温度变化图（英文标签）
+        # 绘制比热随温度变化图
         plt.figure()
         plt.plot(t, specific_heat, 'kx-', linewidth=2)
         plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
         plt.ylabel(r'Specific Heat per Site $(k_B)$', fontsize=12)
         plt.title('Specific Heat vs Temperature', fontsize=14)
         plt.grid(True, alpha=0.3)
-        if save_plots:
-            plt.savefig(os.path.join(output_dir, f'specific_heat_vs_temperature.{file_format}'), 
-                       format=file_format, bbox_inches='tight', dpi=300)
+        plt.savefig(os.path.join(self.figures_dir, f'specific_heat_vs_temperature.{file_format}'), 
+                   format=file_format, bbox_inches='tight', dpi=300)
         
-        # 绘制磁化强度随温度变化图（英文标签）
+        # 绘制磁化强度随温度变化图
         plt.figure()
         plt.plot(t, magnetization, 'bx-', linewidth=2)
         plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
         plt.ylabel(r'Average Magnetization per Site', fontsize=12)
         plt.title('Magnetization vs Temperature', fontsize=14)
         plt.grid(True, alpha=0.3)
-        if save_plots:
-            plt.savefig(os.path.join(output_dir, f'magnetization_vs_temperature.{file_format}'), 
-                       format=file_format, bbox_inches='tight', dpi=300)
+        plt.savefig(os.path.join(self.figures_dir, f'magnetization_vs_temperature.{file_format}'), 
+                   format=file_format, bbox_inches='tight', dpi=300)
         
-        # 绘制磁化率随温度变化图（英文标签）
+        # 绘制磁化率随温度变化图
         plt.figure()
         plt.plot(t, susceptibility, 'gx-', linewidth=2)
         plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
         plt.ylabel(r'Magnetic Susceptibility $(k_B/J)$', fontsize=12)
         plt.title('Susceptibility vs Temperature', fontsize=14)
         plt.grid(True, alpha=0.3)
-        if save_plots:
-            plt.savefig(os.path.join(output_dir, f'susceptibility_vs_temperature.{file_format}'), 
-                       format=file_format, bbox_inches='tight', dpi=300)
+        plt.savefig(os.path.join(self.figures_dir, f'susceptibility_vs_temperature.{file_format}'), 
+                   format=file_format, bbox_inches='tight', dpi=300)
         
-        if show_plots:
-            plt.show()
-        else:
-            plt.close('all')
+        plt.close('all')
     
-    def save_results(self, filename: str = 'simulation_results.txt', 
-                   output_dir: str = '.') -> None:
-        """
-        将模拟结果保存到文本文件
-        
-        参数:
-            filename: 输出文件名。默认值: 'simulation_results.txt'
-            output_dir: 文件保存目录。默认值: 当前目录
-        """
+    def save_results(self, filename: str = 'simulation_results.txt') -> None:
+        """将模拟结果保存到文本文件"""
         if not self.results:
             raise ValueError("未找到模拟结果。请先运行模拟。")
-        
-        # 如果输出目录不存在，则创建目录
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
         
         # 准备要保存的数据
         data = np.column_stack((
@@ -762,12 +734,12 @@ class XYModelSimulator:
         ))
         
         # 保存数据
-        output_path = os.path.join(output_dir, filename)
+        output_path = os.path.join(self.base_output_dir, filename)
         header = "# Temperature\tEnergy\tSpecific Heat\tMagnetization\tSusceptibility"
         np.savetxt(output_path, data, header=header, delimiter='\t', fmt='%.6f')
         
         # 保存配置信息
-        config_path = os.path.join(output_dir, 'simulation_config.txt')
+        config_path = os.path.join(self.base_output_dir, 'simulation_config.txt')
         with open(config_path, 'w', encoding='utf-8') as f:
             f.write("XY Model Simulation Configuration\n")
             f.write("================================\n")
@@ -777,8 +749,8 @@ class XYModelSimulator:
             if 'timing' in self.results:
                 f.write("\nPerformance Data\n")
                 f.write("===============\n")
-                for key, value in self.results['timing'].items():
-                    f.write(f"{key}: {value}\n")
+                f.write(f"总运行时间: {self.results['timing']['total_time']:.2f}秒\n")
+                f.write(f"平均每个温度点时间: {self.results['timing']['per_temperature_time']:.2f}秒\n")
     
     def get_results(self) -> Dict[str, Any]:
         """获取模拟结果"""
@@ -789,3 +761,7 @@ class XYModelSimulator:
     def get_config(self) -> Dict[str, Any]:
         """获取模拟配置"""
         return self.config.copy()
+    
+    def get_output_directory(self) -> str:
+        """获取结果输出目录"""
+        return self.base_output_dir
