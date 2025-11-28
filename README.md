@@ -12,3 +12,17 @@ XY模型模拟器是一个使用Swendsen-Wang聚类算法模拟二维XY模型的
 不会再有大规模更新了  
 后续就是小修小补救  
 
+#### 使用指南  
+xy_model_simulator 文件夹是 xy模型模拟器。 包括模型，测试脚本，使用文档  
+  
+xy_Batch 文件夹是 XY模型批量自旋图生成器。有使用文档和模型  
+
+environment.yml 是我的工作环境配置  
+在另一台机器上，使用该YAML文件可以重新创建出完全相同的环境。  
+核心命令 (恢复):	
+```
+conda env create -f environment.yml
+```
+
+simulation_results_xxxx文件夹 保存了我的测试结果  
+
