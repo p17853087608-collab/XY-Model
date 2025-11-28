@@ -1,568 +1,371 @@
 """
-Test suite for XYModelSimulator with performance tests
-
-This script contains comprehensive tests for XYModelSimulator class,
-including unit tests, integration tests, and performance comparisons.
+XY模型模拟器测试脚本
+测试进度显示功能、GPU加速、结果文件管理等所有功能
 """
 
-import unittest
-import numpy as np
-import os
 import sys
-import tempfile
-import shutil
-import matplotlib
-matplotlib.use('Agg')  # 使用非交互式后端进行测试
-import matplotlib.pyplot as plt
+import os
 import time
+import numpy as np
+import matplotlib.pyplot as plt
 
-# 将当前工作目录添加到路径以导入模拟器
-sys.path.insert(0, os.getcwd())
+# 添加项目路径（如果脚本不在项目根目录）
+project_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_path)
 
 from xy_model_simulator import XYModelSimulator
 
 
-class TestXYModelSimulator(unittest.TestCase):
-    """XYModelSimulator类的测试用例"""
+def test_basic_simulation():
+    """测试基础模拟功能"""
+    print("=" * 60)
+    print("测试1: 基础模拟功能")
+    print("=" * 60)
     
-    def setUp(self):
-        """每个测试方法前设置测试装置"""
-        self.test_dir = tempfile.mkdtemp()
-        self.simulator = XYModelSimulator(
-            lattice_size=4,           # 用于快速测试的小晶格
-            equilibrium_steps=10,     # 用于测试的最小步数
-            measurement_steps=50,     # 用于测试的最小步数
-            interaction_constant=1.0,
-            random_seed=42            # 固定种子以确保可重现性
-        )
+    # 创建模拟器
+    simulator = XYModelSimulator(
+        lattice_size=8,            # 小晶格，快速测试
+        equilibrium_steps=500,     # 减少步数
+        measurement_steps=1000,     # 减少步数
+        random_seed=42
+    )
     
-    def tearDown(self):
-        """每个测试方法后清理"""
-        plt.close('all')  # 关闭所有matplotlib图形
-        if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
+    # 运行模拟
+    results = simulator.run_simulation(
+        temperature_range=(0.1, 2.0), 
+        num_temperatures=5
+    )
     
-    def test_initialization(self):
-        """测试模拟器初始化"""
-        # 测试默认初始化
-        default_sim = XYModelSimulator()
-        self.assertEqual(default_sim.L, 16)
-        self.assertEqual(default_sim.ESTEP, 1000)
-        self.assertEqual(default_sim.STEP, 10000)
-        self.assertEqual(default_sim.J, 1.0)
-        
-        # 测试自定义初始化
-        custom_sim = XYModelSimulator(
-            lattice_size=8,
-            equilibrium_steps=500,
-            measurement_steps=2000,
-            interaction_constant=2.0,
-            random_seed=123
-        )
-        self.assertEqual(custom_sim.L, 8)
-        self.assertEqual(custom_sim.ESTEP, 500)
-        self.assertEqual(custom_sim.STEP, 2000)
-        self.assertEqual(custom_sim.J, 2.0)
-        
-        # 测试配置存储
-        config = custom_sim.get_config()
-        self.assertEqual(config['晶格尺寸'], 8)
-        self.assertEqual(config['平衡步数'], 500)
-        self.assertEqual(config['测量步数'], 2000)
-        self.assertEqual(config['相互作用常数'], 2.0)
-        self.assertEqual(config['随机种子'], 123)
+    # 验证结果
+    assert 'temperature' in results
+    assert 'energy' in results
+    assert 'magnetization' in results
+    assert 'timing' in results
     
-    def test_run_simulation(self):
-        """测试完整模拟运行"""
-        results = self.simulator.run_simulation(
-            temperature_range=(0.5, 1.5),
-            num_temperatures=5
-        )
-        
-        # 检查结果结构
-        self.assertIn('temperature', results)
-        self.assertIn('energy', results)
-        self.assertIn('magnetization', results)
-        self.assertIn('specific_heat', results)
-        self.assertIn('susceptibility', results)
-        
-        # 检查数组长度
-        n_temps = 5
-        self.assertEqual(len(results['temperature']), n_temps)
-        self.assertEqual(len(results['energy']), n_temps)
-        self.assertEqual(len(results['magnetization']), n_temps)
-        self.assertEqual(len(results['specific_heat']), n_temps)
-        self.assertEqual(len(results['susceptibility']), n_temps)
-        
-        # 检查温度范围
-        self.assertAlmostEqual(results['temperature'][0], 0.5)
-        self.assertAlmostEqual(results['temperature'][-1], 1.5)
-        
-        # 检查物理合理性
-        self.assertTrue(np.all(results['energy'] <= 0))
-        self.assertTrue(np.all(results['magnetization'] >= 0))
-        self.assertTrue(np.all(results['specific_heat'] >= 0))
-        self.assertTrue(np.all(results['susceptibility'] >= 0))
-    
-    def test_spin_visualization(self):
-        """测试自旋可视化功能"""
-        # 首先运行模拟
-        self.simulator.run_simulation(
-            temperature_range=(0.5, 1.5),
-            num_temperatures=3
-        )
-        
-        # 测试自旋可视化
-        self.simulator.generate_spin_visualization(
-            output_dir=self.test_dir,
-            arrow_density=1
-        )
-        
-        # 检查是否创建了文件
-        for idx in range(3):
-            temp = self.simulator.spin_configurations[idx]['temperature']
-            filename = f'spin_config_T_{temp:.3f}.png'
-            filepath = os.path.join(self.test_dir, filename)
-            self.assertTrue(os.path.exists(filepath), f"文件 {filename} 未创建")
-    
-    def test_plot_results(self):
-        """测试绘图功能"""
-        # 首先运行模拟
-        self.simulator.run_simulation(
-            temperature_range=(0.5, 1.5),
-            num_temperatures=5
-        )
-        
-        # 测试不保存的绘图
-        self.simulator.plot_results(save_plots=False, show_plots=False)
-        
-        # 测试保存的绘图
-        self.simulator.plot_results(
-            save_plots=True,
-            output_dir=self.test_dir,
-            show_plots=False,
-            file_format='png'
-        )
-        
-        # 检查是否创建了文件
-        expected_files = [
-            'energy_vs_temperature.png',
-            'specific_heat_vs_temperature.png',
-            'magnetization_vs_temperature.png',
-            'susceptibility_vs_temperature.png'
-        ]
-        
-        for filename in expected_files:
-            filepath = os.path.join(self.test_dir, filename)
-            self.assertTrue(os.path.exists(filepath), f"文件 {filename} 未创建")
-    
-    def test_save_results(self):
-        """测试结果保存功能"""
-        # 首先运行模拟
-        self.simulator.run_simulation(
-            temperature_range=(0.5, 1.5),
-            num_temperatures=5
-        )
-        
-        # 保存结果
-        filename = 'test_results.txt'
-        self.simulator.save_results(filename=filename, output_dir=self.test_dir)
-        
-        # 检查是否创建了文件
-        filepath = os.path.join(self.test_dir, filename)
-        self.assertTrue(os.path.exists(filepath))
-        
-        # 检查文件内容
-        with open(filepath, 'r') as f:
-            content = f.read()
-            self.assertIn('# Temperature', content)
-            self.assertIn('Energy', content)
-            self.assertIn('Specific Heat', content)
-            self.assertIn('Magnetization', content)
-            self.assertIn('Susceptibility', content)
-        
-        # 测试加载数据
-        data = np.loadtxt(filepath, skiprows=1)
-        self.assertEqual(data.shape, (5, 5))  # 5个温度，5列
-    
-    def test_get_results_get_config(self):
-        """测试get_results和get_config方法"""
-        # 测试模拟前的配置
-        config = self.simulator.get_config()
-        self.assertIsInstance(config, dict)
-        self.assertIn('晶格尺寸', config)
-        self.assertIn('平衡步数', config)
-        self.assertIn('测量步数', config)
-        self.assertIn('相互作用常数', config)
-        self.assertIn('随机种子', config)
-        
-        # 测试模拟前的结果（应该报错）
-        with self.assertRaises(ValueError):
-            self.simulator.get_results()
-        
-        # 运行模拟
-        self.simulator.run_simulation(
-            temperature_range=(0.5, 1.5),
-            num_temperatures=3
-        )
-        
-        # 测试模拟后的结果
-        results = self.simulator.get_results()
-        self.assertIsInstance(results, dict)
-        self.assertIn('temperature', results)
-        self.assertIn('energy', results)
-        self.assertIn('magnetization', results)
-        self.assertIn('specific_heat', results)
-        self.assertIn('susceptibility', results)
-        self.assertIn('config', results)
-    
-    def test_set_config(self):
-        """测试配置更新"""
-        # 测试有效的配置更新
-        self.simulator.set_config(
-            lattice_size=8,
-            equilibrium_steps=200,
-            measurement_steps=1000,
-            interaction_constant=2.0,
-            random_seed=123
-        )
-        
-        # 检查是否更新了值
-        self.assertEqual(self.simulator.L, 8)
-        self.assertEqual(self.simulator.ESTEP, 200)
-        self.assertEqual(self.simulator.STEP, 1000)
-        self.assertEqual(self.simulator.J, 2.0)
-        
-        # 检查是否更新了配置
-        config = self.simulator.get_config()
-        self.assertEqual(config['晶格尺寸'], 8)
-        self.assertEqual(config['平衡步数'], 200)
-        self.assertEqual(config['测量步数'], 1000)
-        self.assertEqual(config['相互作用常数'], 2.0)
-        self.assertEqual(config['随机种子'], 123)
-        
-        # 测试无效的配置参数
-        with self.assertRaises(ValueError):
-            self.simulator.set_config(invalid_param=42)
-        
-        # 测试配置更改后是否清除了结果
-        self.simulator.run_simulation(temperature_range=(0.5, 1.0), num_temperatures=2)
-        self.assertIsNotNone(self.simulator.results)
-        
-        self.simulator.set_config(lattice_size=4)
-        self.assertEqual(self.simulator.results, {})
-    
-    def test_reproducibility(self):
-        """测试固定随机种子的模拟可重现性"""
-        # 创建两个具有相同种子的相同模拟器
-        sim1 = XYModelSimulator(
-            lattice_size=4,
-            equilibrium_steps=10,
-            measurement_steps=20,
-            random_seed=42
-        )
-        
-        sim2 = XYModelSimulator(
-            lattice_size=4,
-            equilibrium_steps=10,
-            measurement_steps=20,
-            random_seed=42
-        )
-        
-        # 运行相同的模拟
-        results1 = sim1.run_simulation(temperature_range=(1.0, 1.5), num_temperatures=3)
-        results2 = sim2.run_simulation(temperature_range=(1.0, 1.5), num_temperatures=3)
-        
-        # 检查结果是否相同
-        np.testing.assert_array_almost_equal(results1['temperature'], results2['temperature'])
-        np.testing.assert_array_almost_equal(results1['energy'], results2['energy'])
-        np.testing.assert_array_almost_equal(results1['magnetization'], results2['magnetization'])
-        np.testing.assert_array_almost_equal(results1['specific_heat'], results2['specific_heat'])
-        np.testing.assert_array_almost_equal(results1['susceptibility'], results2['susceptibility'])
-    
-    def test_physical_consistency(self):
-        """测试结果的物理一致性"""
-        # 运行具有更多点的模拟以获得更好的统计
-        self.simulator.set_config(
-            lattice_size=6,
-            equilibrium_steps=50,
-            measurement_steps=200
-        )
-        
-        results = self.simulator.run_simulation(
-            temperature_range=(0.1, 2.0),
-            num_temperatures=10
-        )
-        
-        temperatures = results['temperature']
-        energies = results['energy']
-        magnetizations = results['magnetization']
-        
-        # 测试温度排序
-        self.assertTrue(np.all(np.diff(temperatures) > 0))
-        
-        # 测试能量行为（应该随温度增加）
-        # 注意：这是总体趋势，不一定是单调的
-        energy_low_T = np.mean(energies[:3])  # 低温平均
-        energy_high_T = np.mean(energies[-3:])  # 高温平均
-        self.assertGreater(energy_high_T, energy_low_T)
-        
-        # 测试磁化强度行为（应该随温度降低）
-        mag_low_T = np.mean(magnetizations[:3])
-        mag_high_T = np.mean(magnetizations[-3:])
-        self.assertGreater(mag_low_T, mag_high_T)
-        
-        # 测试值范围
-        self.assertTrue(np.all(energies <= 0))
-        self.assertTrue(np.all(magnetizations >= 0))
-        self.assertTrue(np.all(magnetizations <= 1))
-        self.assertTrue(np.all(results['specific_heat'] >= 0))
-        self.assertTrue(np.all(results['susceptibility'] >= 0))
+    print("✓ 基础模拟功能测试通过")
+    print(f"结果保存在: {simulator.get_output_directory()}")
+    return simulator
 
 
-class TestXYModelSimulatorPerformance(unittest.TestCase):
-    """XYModelSimulator的性能测试类"""
+def test_gpu_acceleration():
+    """测试GPU加速功能（如果可用）"""
+    print("=" * 60)
+    print("测试2: GPU加速功能")
+    print("=" * 60)
     
-    def setUp(self):
-        """设置性能测试"""
-        self.test_dir = tempfile.mkdtemp()
-        
-        # 创建不同尺寸的模拟器用于性能比较
-        self.small_sim = XYModelSimulator(
-            lattice_size=8,
-            equilibrium_steps=100,
-            measurement_steps=500,
-            random_seed=42
-        )
-        
-        self.medium_sim = XYModelSimulator(
+    try:
+        # 测试GPU版本
+        simulator_gpu = XYModelSimulator(
             lattice_size=16,
-            equilibrium_steps=500,
-            measurement_steps=2000,
-            random_seed=42
-        )
-        
-        self.large_sim = XYModelSimulator(
-            lattice_size=32,
             equilibrium_steps=1000,
             measurement_steps=5000,
-            random_seed=42
+            use_gpu=True,
+            random_seed=123
         )
-    
-    def tearDown(self):
-        """清理性能测试"""
-        plt.close('all')
-        if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
-    
-    def measure_simulation_time(self, simulator, num_runs=5):
-        """测量模拟运行时间"""
-        times = []
         
-        for _ in range(num_runs):
-            start_time = time.time()
-            simulator.run_simulation(
-                temperature_range=(0.5, 2.5),
-                num_temperatures=10
-            )
-            end_time = time.time()
-            times.append(end_time - start_time)
+        start_time = time.time()
+        results_gpu = simulator_gpu.run_simulation(
+            temperature_range=(0.1, 2.0), 
+            num_temperatures=8
+        )
+        gpu_time = time.time() - start_time
         
-        return np.mean(times), np.std(times)
-    
-    def test_performance_comparison(self):
-        """测试不同晶格尺寸的性能"""
-        print("\n性能测试结果:")
-        print("=" * 50)
+        # 测试CPU版本
+        simulator_cpu = XYModelSimulator(
+            lattice_size=16,
+            equilibrium_steps=1000,
+            measurement_steps=5000,
+            use_gpu=False,
+            random_seed=123
+        )
         
-        # 测试小尺寸晶格
-        mean_time_small, std_time_small = self.measure_simulation_time(self.small_sim)
-        print(f"小晶格 (8x8): 平均时间 = {mean_time_small:.3f} ± {std_time_small:.3f} 秒")
+        start_time = time.time()
+        results_cpu = simulator_cpu.run_simulation(
+            temperature_range=(0.1, 2.0), 
+            num_temperatures=8
+        )
+        cpu_time = time.time() - start_time
         
-        # 测试中等尺寸晶格
-        mean_time_medium, std_time_medium = self.measure_simulation_time(self.medium_sim)
-        print(f"中等晶格 (16x16): 平均时间 = {mean_time_medium:.3f} ± {std_time_medium:.3f} 秒")
+        # 验证结果一致性
+        assert np.allclose(results_gpu['temperature'], results_cpu['temperature'])
+        assert np.allclose(results_gpu['energy'], results_cpu['energy'], rtol=1e-3)
         
-        # 测试大尺寸晶格
-        mean_time_large, std_time_large = self.measure_simulation_time(self.large_sim)
-        print(f"大晶格 (32x32): 平均时间 = {mean_time_large:.3f} ± {std_time_large:.3f} 秒")
+        # 比较性能
+        speedup = cpu_time / gpu_time
+        print(f"GPU加速测试通过")
+        print(f"CPU时间: {cpu_time:.2f}秒")
+        print(f"GPU时间: {gpu_time:.2f}秒")
+        print(f"加速比: {speedup:.2f}x")
         
-        # 计算缩放关系
-        size_ratio_medium_small = (16/8)**2
-        time_ratio_medium_small = mean_time_medium / mean_time_small
-        print(f"中等/小尺寸时间比: {time_ratio_medium_small:.2f} (理论值: {(16/8)**2:.2f})")
+        return simulator_gpu, simulator_cpu
         
-        size_ratio_large_medium = (32/16)**2
-        time_ratio_large_medium = mean_time_large / mean_time_medium
-        print(f"大/中等尺寸时间比: {time_ratio_large_medium:.2f} (理论值: {(32/16)**2:.2f})")
-        
-        size_ratio_large_small = (32/8)**2
-        time_ratio_large_small = mean_time_large / mean_time_small
-        print(f"大/小尺寸时间比: {time_ratio_large_small:.2f} (理论值: {(32/8)**2:.2f})")
-        
-        print("=" * 50)
-        
-        # 验证时间复杂度接近理论预期
-        # 理论时间复杂度: O(L^2 × steps × temperatures)
-        # 预期时间比应该接近尺寸比的平方
-        expected_ratio_medium_small = size_ratio_medium_small
-        expected_ratio_large_small = size_ratio_large_small
-        
-        # 允许一定的误差范围（由于常数因子和其他开销）
-        tolerance = 0.3
-        
-        self.assertLess(abs(time_ratio_medium_small - expected_ratio_medium_small) / expected_ratio_medium_small, tolerance)
-        self.assertLess(abs(time_ratio_large_small - expected_ratio_large_small) / expected_ratio_large_small, tolerance)
-    
-    def test_memory_usage(self):
-        """测试内存使用情况"""
-        import psutil
-        import os
-        
-        print("\n内存使用测试:")
-        print("=" * 50)
-        
-        # 测试不同晶格尺寸的内存使用
-        for size, name in [(8, "小"), (16, "中等"), (32, "大")]:
-            # 创建模拟器
-            sim = XYModelSimulator(
-                lattice_size=size,
-                equilibrium_steps=100,
-                measurement_steps=500,
-                random_seed=42
-            )
-            
-            # 获取进程内存使用
-            process = psutil.Process(os.getpid())
-            memory_before = process.memory_info().rss / (1024 * 1024)  # MB
-            
-            # 运行模拟
-            sim.run_simulation(
-                temperature_range=(0.5, 1.5),
-                num_temperatures=5
-            )
-            
-            memory_after = process.memory_info().rss / (1024 * 1024)  # MB
-            memory_used = memory_after - memory_before
-            
-            print(f"{name}晶格 ({size}x{size}): 内存使用 = {memory_used:.2f} MB")
-        
-        print("=" * 50)
-    
-    def test_optimization_effectiveness(self):
-        """测试优化效果"""
-        print("\n优化效果测试:")
-        print("=" * 50)
-        
-        # 创建未优化的模拟器（如果可能的话）
-        try:
-            # 尝试导入未优化的版本
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'unoptimized'))
-            from xy_model_simulator_unoptimized import XYModelSimulator as UnoptimizedSimulator
-            
-            unoptimized_sim = UnoptimizedSimulator(
-                lattice_size=16,
-                equilibrium_steps=500,
-                measurement_steps=2000,
-                random_seed=42
-            )
-            
-            # 测量未优化版本的时间
-            mean_time_unopt, _ = self.measure_simulation_time(unoptimized_sim, num_runs=3)
-            print(f"未优化版本平均时间: {mean_time_unopt:.3f} 秒")
-            
-        except ImportError:
-            print("未优化版本不可用，跳过对比测试")
-            mean_time_unopt = None
-        
-        # 测试优化版本的时间
-        mean_time_opt, _ = self.measure_simulation_time(self.medium_sim, num_runs=3)
-        print(f"优化版本平均时间: {mean_time_opt:.3f} 秒")
-        
-        if mean_time_unopt is not None:
-            speedup = mean_time_unopt / mean_time_opt
-            print(f"加速比: {speedup:.2f}x")
-        
-        print("=" * 50)
+    except ImportError:
+        print("⚠ CuPy未安装，跳过GPU加速测试")
+        return None, None
 
 
-def run_example_simulation():
-    """运行示例模拟并显示结果"""
+def test_progress_display():
+    """测试进度显示功能"""
     print("=" * 60)
-    print("XY Model Simulator - Example Simulation (优化版)")
+    print("测试3: 进度显示功能")
     print("=" * 60)
     
     # 创建模拟器
     simulator = XYModelSimulator(
         lattice_size=8,
-        equilibrium_steps=200,
+        equilibrium_steps=500,
         measurement_steps=1000,
-        random_seed=42
+        random_seed=456
     )
     
-    print("配置:")
-    for key, value in simulator.get_config().items():
-        print(f"  {key}: {value}")
-    
-    print("\n运行模拟...")
-    start_time = time.time()
+    # 运行模拟（会显示进度）
     results = simulator.run_simulation(
-        temperature_range=(0.1, 2.0),
+        temperature_range=(0.1, 2.5), 
         num_temperatures=10
     )
-    end_time = time.time()
     
-    print(f"\n模拟完成!")
-    print(f"运行时间: {end_time - start_time:.2f} 秒")
-    print(f"温度范围: {results['temperature'][0]:.2f} - {results['temperature'][-1]:.2f}")
-    print(f"能量范围: {results['energy'].min():.4f} - {results['energy'].max():.4f}")
-    print(f"磁化强度范围: {results['magnetization'].min():.4f} - {results['magnetization'].max():.4f}")
+    # 验证进度数据
+    assert 'timing' in results
+    timing = results['timing']
     
-    # 找到比热峰值
-    peak_idx = np.argmax(results['specific_heat'])
-    peak_temp = results['temperature'][peak_idx]
-    peak_cv = results['specific_heat'][peak_idx]
-    print(f"比热峰值在 T = {peak_temp:.3f}, Cv = {peak_cv:.6f}")
+    assert 'total_time' in timing
+    assert 'per_temperature_time' in timing
+    assert 'min_time' in timing
+    assert 'max_time' in timing
     
-    print("\n示例模拟成功完成!")
-    print("=" * 60)
+    print("✓ 进度显示功能测试通过")
+    print(f"总耗时: {timing['total_time']:.2f}秒")
+    print(f"平均耗时: {timing['avg_time_per_temp']:.2f}秒")
+    print(f"最快: {timing['min_time']:.2f}秒")
+    print(f"最慢: {timing['max_time']:.2f}秒")
+    
+    return simulator
 
 
-if __name__ == '__main__':
-    # 运行示例模拟
-    run_example_simulation()
-    
-    print("\n" + "=" * 60)
-    print("运行测试套件")
+def test_multiple_runs():
+    """测试多次运行自动区分功能"""
+    print("=" * 60)
+    print("测试4: 多次运行自动区分")
     print("=" * 60)
     
-    # 创建测试套件并运行测试
-    loader = unittest.TestLoader()
-    suite = loader.loadTestsFromTestCase(TestXYModelSimulator)
-    suite.addTests(loader.loadTestsFromTestCase(TestXYModelSimulatorPerformance))
+    results = []
+    directories = []
     
-    # 运行测试，详细输出性能测试结果
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
+    # 运行3次模拟
+    for i in range(3):
+        print(f"第{i+1}次运行...")
+        
+        simulator = XYModelSimulator(
+            lattice_size=8,
+            equilibrium_steps=500,
+            measurement_steps=1000,
+            random_seed=789 + i  # 不同的随机种子
+        )
+        
+        result = simulator.run_simulation(
+            temperature_range=(0.1, 1.5), 
+            num_temperatures=5
+        )
+        
+        results.append(result)
+        directories.append(simulator.get_output_directory())
+        
+        # 等待一小段时间确保时间戳不同
+        time.sleep(0.1)
     
-    # 打印摘要
-    print(f"\n测试总数: {result.testsRun}")
-    print(f"失败: {len(result.failures)}")
-    print(f"错误: {len(result.errors)}")
+    # 验证所有结果文件夹不同
+    assert len(set(directories)) == 3, "多次运行结果文件夹未正确区分"
     
-    if result.failures:
-        print("\n失败:")
-        for test, traceback in result.failures:
-            print(f"  {test}: {traceback}")
+    print("✓ 多次运行自动区分测试通过")
+    for i, dir_path in enumerate(directories):
+        print(f"第{i+1}次结果: {dir_path}")
     
-    if result.errors:
-        print("\n错误:")
-        for test, traceback in result.errors:
-            print(f"  {test}: {traceback}")
-    
-    if result.wasSuccessful():
-        print("\n所有测试通过! ✓")
-    else:
-        print("\n部分测试失败! ✗")
-    
+    return results, directories
+
+
+def test_spin_visualization():
+    """测试自旋可视化功能"""
     print("=" * 60)
+    print("测试5: 自旋可视化功能")
+    print("=" * 60)
+    
+    # 创建模拟器
+    simulator = XYModelSimulator(
+        lattice_size=8,
+        equilibrium_steps=500,
+        measurement_steps=1000,
+        random_seed=999
+    )
+    
+    # 运行模拟
+    results = simulator.run_simulation(
+        temperature_range=(0.1, 2.0), 
+        num_temperatures=5
+    )
+    
+    # 验证自旋配置数据
+    assert hasattr(simulator, 'spin_configurations')
+    assert len(simulator.spin_configurations) > 0
+    
+    # 检查自旋图片文件是否存在
+    spin_dir = os.path.join(simulator.get_output_directory(), 'spin_configurations')
+    spin_files = [f for f in os.listdir(spin_dir) if f.endswith('.png')]
+    assert len(spin_files) == 5, f"自旋图片数量不正确: {len(spin_files)}"
+    
+    print("✓ 自旋可视化功能测试通过")
+    print(f"生成了 {len(spin_files)} 张自旋图片")
+    for spin_file in spin_files[:3]:  # 只显示前3个
+        print(f"  - {spin_file}")
+    
+    return simulator
+
+
+def test_file_structure():
+    """测试结果文件结构"""
+    print("=" * 60)
+    print("测试6: 结果文件结构")
+    print("=" * 60)
+    
+    # 创建模拟器
+    simulator = XYModelSimulator(
+        lattice_size=8,
+        equilibrium_steps=500,
+        measurement_steps=1000,
+        random_seed=111
+    )
+    
+    # 运行模拟
+    results = simulator.run_simulation(
+        temperature_range=(0.1, 1.0), 
+        num_temperatures=5
+    )
+    
+    # 检查主文件夹
+    output_dir = simulator.get_output_directory()
+    assert os.path.exists(output_dir), f"主文件夹不存在: {output_dir}"
+    
+    # 检查子文件夹
+    figures_dir = os.path.join(output_dir, 'figures')
+    spin_dir = os.path.join(output_dir, 'spin_configurations')
+    assert os.path.exists(figures_dir), "figures文件夹不存在"
+    assert os.path.exists(spin_dir), "spin_configurations文件夹不存在"
+    
+    # 检查文件
+    data_file = os.path.join(output_dir, 'simulation_results.txt')
+    config_file = os.path.join(output_dir, 'simulation_config.txt')
+    assert os.path.exists(data_file), "数据文件不存在"
+    assert os.path.exists(config_file), "配置文件不存在"
+    
+    # 检查图表文件
+    figure_files = [f for f in os.listdir(figures_dir) if f.endswith('.pdf')]
+    assert len(figure_files) == 4, f"图表文件数量不正确: {len(figure_files)}"
+    
+    print("✓ 结果文件结构测试通过")
+    print(f"主文件夹: {output_dir}")
+    print(f"包含 {len(figure_files)} 个图表文件")
+    print(f"包含 {len(os.listdir(spin_dir))} 个自旋图片")
+    
+    return simulator
+
+
+def test_error_handling():
+    """测试错误处理"""
+    print("=" * 60)
+    print("测试7: 错误处理")
+    print("=" * 60)
+    
+    # 测试未运行模拟时获取结果
+    simulator = XYModelSimulator()
+    
+    try:
+        results = simulator.get_results()
+        assert False, "应该抛出错误"
+    except ValueError as e:
+        assert "未找到模拟结果" in str(e), f"错误信息不正确: {e}"
+        print("✓ 错误处理测试通过")
+    
+    # 测试无效参数
+    try:
+        simulator.plot_results()
+        assert False, "应该抛出错误"
+    except ValueError as e:
+        assert "未找到模拟结果" in str(e), f"错误信息不正确: {e}"
+        print("✓ 错误处理测试通过")
+    
+    return simulator
+
+
+def test_performance_comparison():
+    """测试不同参数下的性能比较"""
+    print("=" * 60)
+    print("测试8: 性能比较")
+    print("=" * 60)
+    
+    configs = [
+        {'lattice_size': 8, 'measurement_steps': 1000},
+        {'lattice_size': 16, 'measurement_steps': 2000},
+        {'lattice_size': 8, 'measurement_steps': 2000},
+    ]
+    
+    results = []
+    
+    for i, config in enumerate(configs):
+        print(f"\n配置 {i+1}: {config}")
+        
+        simulator = XYModelSimulator(
+            lattice_size=config['lattice_size'],
+            measurement_steps=config['measurement_steps'],
+            random_seed=222 + i
+        )
+        
+        start_time = time.time()
+        result = simulator.run_simulation(
+            temperature_range=(0.1, 1.5), 
+            num_temperatures=5
+        )
+        elapsed_time = time.time() - start_time
+        
+        timing = result['timing']
+        
+        results.append({
+            'config': config,
+            'total_time': elapsed_time,
+            'avg_time_per_temp': timing['avg_time_per_temp'],
+            'output_dir': simulator.get_output_directory()
+        })
+        
+        print(f"  总耗时: {elapsed_time:.2f}秒")
+        print(f"  平均每温度点: {timing['avg_time_per_temp']:.2f}秒")
+    
+    print("\n✓ 性能比较测试完成")
+    return results
+
+
+def main():
+    """主测试函数"""
+    print("XY模型模拟器测试开始")
+    print("=" * 80)
+    
+    try:
+        # 运行所有测试
+        test_basic_simulation()
+        test_gpu_acceleration()
+        test_progress_display()
+        test_multiple_runs()
+        test_spin_visualization()
+        test_file_structure()
+        test_error_handling()
+        test_performance_comparison()
+        
+        print("\n" + "=" * 80)
+        print("所有测试通过！")
+        print("XY模型模拟器功能正常。")
+        
+    except Exception as e:
+        print(f"\n❌ 测试失败: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    main()

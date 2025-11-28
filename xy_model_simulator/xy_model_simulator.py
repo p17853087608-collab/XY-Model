@@ -1,7 +1,7 @@
 """
 XY Model Simulator using Swendsen-Wang Algorithm with GPU Acceleration
 
-This module provides an optimized class for simulating 2D XY model using 
+This module provides a class for simulating 2D XY model using 
 Swendsen-Wang clustering algorithm with optional GPU acceleration.
 """
 
@@ -88,8 +88,6 @@ class XYModelSimulator:
         self.spin_dir = os.path.join(self.base_output_dir, "spin_configurations")
         os.makedirs(self.figures_dir, exist_ok=True)
         os.makedirs(self.spin_dir, exist_ok=True)
-        
-        print(f"XY模型模拟器初始化完成。计算设备: {self.device}，晶格尺寸: {self.L}x{self.L}")
     
     def _setup_boundary_arrays(self):
         """预计算周期性边界索引数组以提高性能"""
@@ -485,9 +483,15 @@ class XYModelSimulator:
         # 存储每个温度点计算时间
         temperature_times = np.zeros(num_temperatures)
         
+        print(f"开始XY模型模拟，共 {num_temperatures} 个温度点...")
+        print(f"温度范围: {t_min:.2f} - {t_max:.2f}")
+        print("=" * 50)
+        
         # 遍历各温度点进行模拟
         for idx, temp in enumerate(temperature_array):
             temp_start = time.time()
+            
+            print(f"正在处理第 {idx+1}/{num_temperatures} 个温度点 (T = {temp:.3f})...", end=" ")
             
             # 初始化自旋
             xy = self._initialize_spins()
@@ -536,17 +540,33 @@ class XYModelSimulator:
                 'susceptibility': susceptibility
             }
             
-            # 记录时间
-            temperature_times[idx] = time.time() - temp_start
-            
+            # 记录时间并显示进度
+            temp_time = time.time() - temp_start
+            temperature_times[idx] = temp_time
+            print(f"完成！耗时: {temp_time:.2f} 秒")
+        
+        print("=" * 50)
+        
         # 总模拟时间
         total_time = time.time() - start_time
-        self.timing_data = {
-            'total_time': total_time,
-            'per_temperature_time': temperature_times.mean()
-        }
+        avg_time_per_temp = temperature_times.mean()
+        
+        # 显示总耗时统计
+        print(f"模拟完成！")
+        print(f"总耗时: {total_time:.2f} 秒")
+        print(f"平均每个温度点耗时: {avg_time_per_temp:.2f} 秒")
+        print(f"最快温度点: {temperature_times.min():.2f} 秒")
+        print(f"最慢温度点: {temperature_times.max():.2f} 秒")
         
         # 存储结果
+        self.timing_data = {
+            'total_time': total_time,
+            'per_temperature_time': temperature_times,
+            'avg_time_per_temp': avg_time_per_temp,
+            'min_time': temperature_times.min(),
+            'max_time': temperature_times.max()
+        }
+        
         self.results = {
             'temperature': temperature_array,
             'energy': energy_array,
@@ -750,7 +770,9 @@ class XYModelSimulator:
                 f.write("\nPerformance Data\n")
                 f.write("===============\n")
                 f.write(f"总运行时间: {self.results['timing']['total_time']:.2f}秒\n")
-                f.write(f"平均每个温度点时间: {self.results['timing']['per_temperature_time']:.2f}秒\n")
+                f.write(f"平均每个温度点时间: {self.results['timing']['avg_time_per_temp']:.2f}秒\n")
+                f.write(f"最快温度点: {self.results['timing']['min_time']:.2f}秒\n")
+                f.write(f"最慢温度点: {self.results['timing']['max_time']:.2f}秒\n")
     
     def get_results(self) -> Dict[str, Any]:
         """获取模拟结果"""
