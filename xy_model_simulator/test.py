@@ -2,7 +2,7 @@ from xy_model_simulator import XYModelSimulator
 
 # 1. 创建模拟器实例
 simulator = XYModelSimulator(
-    lattice_size=16,           # 16x16晶格
+    lattice_size=64,           # 晶格
     equilibrium_steps=1000,    # 平衡步数
     measurement_steps=5000,    # 测量步数
     random_seed=42             # 随机种子，确保可重现性
