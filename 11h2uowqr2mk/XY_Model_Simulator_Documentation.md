@@ -8,8 +8,9 @@
 5. [性能优化](#5-性能优化)
 6. [使用示例](#6-使用示例)
 7. [物理背景](#7-物理背景)
-8. [故障排除](#8-故障排除)
-9. [附录](#9-附录)
+8. [自旋可视化](#8-自旋可视化)
+9. [故障排除](#9-故障排除)
+10. [附录](#10-附录)
 
 ## 1. 概述
 
@@ -20,6 +21,7 @@ XY模型模拟器是一个使用Swendsen-Wang聚类算法模拟二维XY模型的
 - 🔬 支持XY模型的蒙特卡洛模拟，使用Swendsen-Wang聚类算法
 - 🚀 可选GPU加速，大幅提升大规模模拟性能
 - 📊 自动生成物理量随温度变化的图表
+- 🎨 创新的自旋可视化功能，使用三通道彩色图直观展示自旋配置
 - 💾 支持结果保存和自旋配置可视化
 - ⚙️ 灵活的参数配置，适应不同模拟需求
 - 🔄 可重现的结果，支持随机种子设置
@@ -31,6 +33,7 @@ XY模型模拟器是一个使用Swendsen-Wang聚类算法模拟二维XY模型的
 - 向量化操作优化，提高计算效率
 - 内存管理优化，减少不必要的内存分配
 - 算法优化，提高关键计算步骤性能
+- 自旋可视化升级，用彩色图替代传统箭头图
 
 ## 2. 安装与环境要求
 
@@ -94,7 +97,7 @@ results = simulator.run_simulation(
 
 # 3. 生成结果
 simulator.plot_results(output_dir='results')          # 绘制物理量图表
-simulator.generate_spin_visualization(output_dir='spin_plots')  # 生成自旋配置图
+simulator.generate_spin_visualization(output_dir='彩色自旋图')  # 生成彩色自旋配置图
 simulator.save_results(filename='simulation_data.txt', output_dir='results')  # 保存数据
 ```
 
@@ -136,7 +139,7 @@ XYModelSimulator(
 - `measurement_steps`: 物理量测量步数，默认值: 10000
 - `interaction_constant`: 交换相互作用常数J，默认值: 1.0
 - `random_seed`: 随机种子，默认值: None
-- `use_gpu`: 是否使用GPU加速，默认值: True（自动检测）
+- `use_gpu`: 是否使用GPU加速，默认值: True（如果可用）
 
 #### 主要方法
 
@@ -151,19 +154,20 @@ run_simulation(
 
 运行XY模型模拟，返回包含物理量结果的字典。
 
-**参数**:
-- `temperature_range`: 温度范围(T_min, T_max)，默认值: (0.1, 2.5)
-- `num_temperatures`: 温度点数量，默认值: 10
+##### generate_spin_visualization()
 
-**返回值**:
-包含以下键的字典:
-- `'temperature'`: 温度数组
-- `'energy'`: 能量数组
-- `'magnetization'`: 磁化强度数组
-- `'specific_heat'`: 比热数组
-- `'susceptibility'`: 磁化率数组
-- `'config'`: 模拟配置
-- `'timing'`: 性能计时数据
+```python
+generate_spin_visualization(
+    output_dir: str = 'spin_visualization'
+) -> None
+```
+
+生成自旋配置的彩色可视化图。
+
+**参数**:
+- `output_dir`: 图片保存目录。默认值: 'spin_visualization'
+
+> **版本更新**: 移除了`arrow_density`参数，因为不再使用箭头表示自旋方向，改为彩色三通道图像直接编码自旋信息。
 
 ##### plot_results()
 
@@ -177,17 +181,6 @@ plot_results(
 ```
 
 绘制物理量随温度变化的图表。
-
-##### generate_spin_visualization()
-
-```python
-generate_spin_visualization(
-    output_dir: str = 'spin_visualization',
-    arrow_density: int = 1
-) -> None
-```
-
-生成自旋配置的可视化图。
 
 ##### save_results()
 
@@ -261,6 +254,7 @@ print(f"最大比热: {results['specific_heat'][peak_idx]:.4f}")
 
 # 保存结果
 simulator.plot_results(output_dir='basic_simulation_results')
+simulator.generate_spin_visualization(output_dir='basic_spin_maps')  # 生成彩色自旋图
 simulator.save_results(filename='basic_simulation_data.txt')
 ```
 
@@ -284,53 +278,49 @@ results = simulator.run_simulation(
     num_temperatures=30            # 增加温度点密度
 )
 
-# 生成高分辨率自旋图
-simulator.generate_spin_visualization(
-    output_dir='large_system_spins',
-    arrow_density=2  # 降低箭头密度，提高可视性
-)
+# 生成高分辨率彩色自旋图
+simulator.generate_spin_visualization(output_dir='large_system_spin_maps')
 
 # 保存详细结果
 simulator.save_results(filename='large_system_results.txt')
 ```
 
-### 6.3 不同参数对比研究
+### 6.3 不同温度下的自旋配置对比
 
 ```python
 from xy_model_simulator import XYModelSimulator
 import matplotlib.pyplot as plt
+import os
 
-# 定义要研究的参数
-lattice_sizes = [8, 16, 24]
-results_dict = {}
+# 创建模拟器
+simulator = XYModelSimulator(
+    lattice_size=32,
+    equilibrium_steps=1000,
+    measurement_steps=5000,
+    random_seed=42
+)
 
-# 对不同晶格尺寸运行模拟
-for size in lattice_sizes:
-    print(f"运行 {size}x{size} 晶格模拟...")
-    simulator = XYModelSimulator(
-        lattice_size=size,
-        equilibrium_steps=1000,
-        measurement_steps=5000,
-        random_seed=42
-    )
-    
-    results = simulator.run_simulation(
-        temperature_range=(0.1, 2.5),
-        num_temperatures=25
-    )
-    results_dict[size] = results
+# 运行模拟
+simulator.run_simulation(temperature_range=(0.1, 2.0), num_temperatures=15)
 
-# 比较不同晶格尺寸的结果
-plt.figure(figsize=(10, 6))
-for size, results in results_dict.items():
-    plt.plot(results['temperature'], results['specific_heat'], 
-             label=f'{size}x{size}', linewidth=2)
+# 生成特定温度点的自旋图用于对比
+output_dir = 'spin_comparison'
+os.makedirs(output_dir, exist_ok=True)
 
-plt.xlabel('Temperature')
-plt.ylabel('Specific Heat')
-plt.title('Specific Heat for Different Lattice Sizes')
-plt.legend()
-plt.savefig('lattice_size_comparison.pdf', bbox_inches='tight')
+# 选择几个典型温度点
+selected_temps = [0.2, 0.8, 1.2, 1.8]
+spin_configs = simulator.get_results()['spin_configurations']
+
+# 复制选定温度点的自旋图
+for idx, data in spin_configs.items():
+    temp = data['temperature']
+    if any(abs(temp - t) < 0.05 for t in selected_temps):
+        src_path = os.path.join('spin_visualization', f'spin_config_T_{temp:.3f}.png')
+        dest_path = os.path.join(output_dir, f'spin_config_T_{temp:.3f}.png')
+        if os.path.exists(src_path):
+            os.rename(src_path, dest_path)
+
+print(f"已将典型温度点的自旋图保存到 {output_dir} 文件夹，可直观对比不同温度下的自旋 ordering")
 ```
 
 ## 7. 物理背景
@@ -366,9 +356,62 @@ Swendsen-Wang算法是一种高效的聚类算法，通过以下步骤加速蒙�
 - **比热**: $C_V = \frac{\langle E^2 \rangle - \langle E \rangle^2}{T^2}$，衡量能量涨落
 - **磁化率**: $\chi = \frac{\langle M^2 \rangle - \langle M \rangle^2}{T}$，衡量磁化强度涨落
 
-## 8. 故障排除
+## 8. 自旋可视化
 
-### 8.1 常见问题及解决方法
+### 8.1 彩色可视化原理
+
+本模拟器采用创新的三通道彩色图替代传统箭头图来可视化自旋配置，具有更高的信息密度和直观性。
+
+**颜色映射原理**:
+- **色调(Hue)**: 表示自旋角度，从红色(0°)→黄色(90°)→绿色(180°)→蓝色(270°)→红色(360°)循环
+- **饱和度(Saturation)**: 表示磁化强度，高饱和度(鲜艳)对应高磁化强度，低饱和度(暗淡)对应低磁化强度
+- **明度(Value)**: 固定为0.9，确保图像整体明亮清晰
+
+**实现代码**:
+```python
+# 自旋角度→色调映射 (0→1对应0→2π)
+hue = (spin_config % (2 * np.pi)) / (2 * np.pi)
+# 磁化强度→饱和度映射 (0.3→1.0)
+saturation = 0.3 + 0.7 * magnetization
+# 固定明度
+value = 0.9
+
+# 创建HSV图像并转换为RGB
+hsv_image = np.stack([hue, saturation * np.ones_like(hue), value * np.ones_like(hue)], axis=2)
+rgb_image = hsv_to_rgb(hsv_image)  # HSV→RGB转换
+```
+
+### 8.2 可视化效果对比
+
+| 传统箭头图 | 新型彩色图 |
+|----------|----------|
+| 使用箭头方向表示自旋方向 | 使用颜色直接编码自旋方向 |
+| 单一蓝色，信息密度低 | 三通道彩色，信息丰富 |
+| 需要箭头密度控制参数 | 无需额外参数，自动适配 |
+| 大晶格时易显杂乱 | 大晶格仍保持清晰 |
+| 难以直观展示整体有序性 | 颜色均匀性直观反映有序程度 |
+
+### 8.3 物理意义解读
+
+彩色自旋图能直观反映以下物理现象：
+
+1. **有序-无序相变**: 低温时颜色均匀（有序相），高温时颜色杂乱（无序相）
+2. **Kosterlitz-Thouless相变**: 中间温度出现特征性的涡旋-反涡旋结构（彩色图案中的漩涡状结构）
+3. **临界行为**: 接近相变温度时，颜色斑块尺寸增大
+4. **磁化强度变化**: 颜色饱和度随温度升高逐渐降低，反映磁化强度减小
+
+### 8.4 可视化图解读指南
+
+![自旋可视化解读示意图](spin_visualization_guide.png)
+
+**图注**:
+- **左图(低温)**: 颜色均匀（主要为红色和黄色），高饱和度，表明自旋高度有序
+- **中图(近相变点)**: 出现大尺度颜色斑块和涡旋结构，表明关联长度增加
+- **右图(高温)**: 颜色杂乱，低饱和度，表明自旋完全无序
+
+## 9. 故障排除
+
+### 9.1 常见问题及解决方法
 
 #### GPU加速问题
 
@@ -387,7 +430,15 @@ Swendsen-Wang算法是一种高效的聚类算法，通过以下步骤加速蒙�
 | 结果不可重现 | 未设置随机种子 | 设置random_seed参数 |
 | 图表无法显示 | 无显示环境 | 设置show_plots=False |
 
-### 8.2 性能优化建议
+#### 可视化问题
+
+| 问题 | 可能原因 | 解决方法 |
+|------|---------|---------|
+| 颜色与角度对应关系不清晰 | 缺乏颜色参考 | 查看"自旋可视化解读指南" |
+| 生成图像文件过大 | 晶格尺寸过大 | 适当减小lattice_size |
+| 图像保存失败 | output_dir不存在 | 确保目录存在或使用默认目录 |
+
+### 9.2 性能优化建议
 
 如果模拟速度较慢或遇到性能问题：
 
@@ -404,9 +455,9 @@ Swendsen-Wang算法是一种高效的聚类算法，通过以下步骤加速蒙�
    - 避免同时运行多个大系统模拟
    - 及时清理不需要的变量和结果
 
-## 9. 附录
+## 10. 附录
 
-### 9.1 物理量单位
+### 10.1 物理量单位
 
 模拟器使用自然单位制，主要物理量单位：
 - 温度: $k_BT/J$
@@ -415,7 +466,7 @@ Swendsen-Wang算法是一种高效的聚类算法，通过以下步骤加速蒙�
 - 比热: $k_B$
 - 磁化率: $\mu^2/(k_BT)$
 
-### 9.2 参考文献
+### 10.2 参考文献
 
 1. Swendsen, R. H., & Wang, J. S. (1987). Nonuniversal critical dynamics in Monte Carlo simulations. Physical Review Letters, 58(2), 86.
 
@@ -423,10 +474,11 @@ Swendsen-Wang算法是一种高效的聚类算法，通过以下步骤加速蒙�
 
 3. Newman, M. E., & Barkema, G. T. (1999). Monte Carlo Methods in Statistical Physics. Oxford University Press.
 
-### 9.3 更新日志
+### 10.3 更新日志
 
 | 版本 | 日期 | 主要更新 |
 |------|------|---------|
 | v1.0 | 2025-11-28 | 初始版本，基础XY模型模拟 |
 | v1.1 | 2025-11-29 | 添加GPU加速功能 |
 | v1.2 | 2025-11-30 | 优化内存管理，提高性能 |
+| v2.0 | 2025-12-01 | 自旋可视化升级：箭头图→彩色图，优化用户体验 |

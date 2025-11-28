@@ -1,7 +1,7 @@
 """
 XY Model Simulator using Swendsen-Wang Algorithm with GPU Acceleration
 
-This module provides an optimized class for simulating the 2D XY model using 
+This module provides an optimized class for simulating 2D XY model using 
 Swendsen-Wang clustering algorithm with optional GPU acceleration.
 """
 
@@ -552,14 +552,92 @@ class XYModelSimulator:
         
         return self.results
     
-    def generate_spin_visualization(self, output_dir: str = 'spin_visualization', 
-                                  arrow_density: int = 1) -> None:
+    def _visualize_spin_configuration(self, spin_config: np.ndarray, temperature: float, 
+                                     magnetization: float, susceptibility: float, 
+                                     output_path: str) -> None:
         """
-        生成所有温度点的自旋配置可视化图
+        可视化单个温度点的自旋配置（彩色三通道图）
+        
+        参数:
+            spin_config: 自旋角度矩阵
+            temperature: 当前温度
+            magnetization: 当前温度下的磁化强度
+            susceptibility: 当前温度下的磁化率
+            output_path: 图片输出路径
+        """
+        # 创建网格
+        x = np.arange(self.L)
+        y = np.arange(self.L)
+        X, Y = np.meshgrid(x, y)
+        
+        # 计算自旋向量
+        U = np.cos(spin_config)
+        V = np.sin(spin_config)
+        
+        # 创建RGB彩色图像
+        # 使用自旋角度映射到HSV色彩空间，然后转换为RGB
+        # 将角度从[0, 2π)映射到[0, 1)的色调值
+        hue = (spin_config % (2 * np.pi)) / (2 * np.pi)
+        
+        # 使用磁化强度作为饱和度（归一化到[0.3, 1.0]）
+        saturation = 0.3 + 0.7 * magnetization
+        
+        # 使用恒定的高亮度值
+        value = 0.9
+        
+        # 创建HSV图像并转换为RGB
+        hsv_image = np.stack([hue, saturation * np.ones_like(hue), value * np.ones_like(hue)], axis=2)
+        
+        # 将HSV转换为RGB
+        # 使用matplotlib的colors模块进行颜色空间转换
+        from matplotlib.colors import hsv_to_rgb
+        rgb_image = hsv_to_rgb(hsv_image)
+        
+        # 创建图形
+        plt.figure(figsize=(10, 10))
+        ax = plt.gca()
+        
+        # 显示彩色自旋配置
+        ax.imshow(rgb_image, origin='lower', extent=[-0.5, self.L - 0.5, -0.5, self.L - 0.5])
+        
+        # 添加网格线
+        ax.set_xticks(range(self.L))
+        ax.set_yticks(range(self.L))
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.grid(True, linestyle='--', alpha=0.3, color='white')
+        
+        # 设置图形属性
+        ax.set_aspect('equal')
+        plt.xlim(-0.5, self.L - 0.5)
+        plt.ylim(-0.5, self.L - 0.5)
+        
+        # 添加标题和物理量信息（英文）
+        title_text = f'XY Model Spin Configuration (Temperature = {temperature:.3f})'
+        info_text = f'Magnetization: {magnetization:.4f}\nSusceptibility: {susceptibility:.4f}'
+        
+        plt.title(title_text, fontsize=16, pad=20)
+        plt.text(0.02, 0.98, info_text, transform=ax.transAxes, 
+                 verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
+                 fontsize=12)
+        
+        # 添加颜色条说明
+        cbar_text = 'Color represents spin orientation:\nRed: 0°, Yellow: 90°, Green: 180°, Blue: 270°'
+        plt.text(0.98, 0.02, cbar_text, transform=ax.transAxes, 
+                 horizontalalignment='right', verticalalignment='bottom',
+                 bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8),
+                 fontsize=10)
+        
+        # 保存图片
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+        plt.close()
+    
+    def generate_spin_visualization(self, output_dir: str = 'spin_visualization') -> None:
+        """
+        生成所有温度点的自旋配置可视化图（彩色三通道图）
         
         参数:
             output_dir: 图片保存目录。默认值: 'spin_visualization'
-            arrow_density: 箭头密度控制，1表示每个格点都画箭头
         """
         if not self.spin_configurations:
             raise ValueError("未找到自旋配置数据。请先运行模拟。")
@@ -579,45 +657,11 @@ class XYModelSimulator:
             filename = f'spin_config_T_{temp:.3f}.png'
             output_path = os.path.join(output_dir, filename)
             
-            # 创建网格
-            x = np.arange(self.L)
-            y = np.arange(self.L)
-            X, Y = np.meshgrid(x, y)
-            
-            # 计算自旋向量
-            U = np.cos(spin_config)
-            V = np.sin(spin_config)
-            
-            # 创建图形
-            plt.figure(figsize=(8, 8))
-            ax = plt.gca()
-            
-            # 绘制自旋箭头，根据箭头密度控制显示
-            ax.quiver(X[::arrow_density, ::arrow_density], Y[::arrow_density, ::arrow_density], 
-                      U[::arrow_density, ::arrow_density], V[::arrow_density, ::arrow_density],
-                      color='blue', pivot='mid', scale=20, width=0.005)
-            
-            # 设置图形属性
-            ax.set_aspect('equal')
-            plt.xlim(-0.5, self.L - 0.5)
-            plt.ylim(-0.5, self.L - 0.5)
-            plt.xticks(range(self.L))
-            plt.yticks(range(self.L))
-            plt.grid(True, linestyle='--', alpha=0.7)
-            
-            # 添加标题和物理量信息
-            title_text = f'XY Model Spin Configuration (Temperature = {temp:.3f})'
-            info_text = f'Magnetization: {magnetization:.4f}\nSusceptibility: {susceptibility:.4f}'
-            
-            plt.title(title_text, fontsize=14, pad=20)
-            plt.text(0.02, 0.98, info_text, transform=ax.transAxes, 
-                     verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-            
-            # 保存图片
-            plt.savefig(output_path, bbox_inches='tight', dpi=300)
-            plt.close()
+            # 可视化当前温度的自旋配置
+            self._visualize_spin_configuration(spin_config, temp, magnetization, 
+                                             susceptibility, output_path)
         
-        print(f"自旋可视化完成，共生成 {total} 张图片，保存在 '{output_dir}' 文件夹中")
+        print(f"自旋可视化完成，共生成 {total} 张彩色图片，保存在 '{output_dir}' 文件夹中")
     
     def plot_results(self, save_plots: bool = True, output_dir: str = '.', 
                    show_plots: bool = False, file_format: str = 'pdf') -> None:
@@ -643,45 +687,49 @@ class XYModelSimulator:
         if save_plots and not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         
-        # 绘制能量随温度变化图
+        # 绘制能量随温度变化图（英文标签）
         plt.figure()
-        plt.plot(t, energy, 'rx-')
-        plt.xlabel(r'Temperature $(k_BT/J)$')
-        plt.ylabel(r'Average Energy per Site $(J)$')
-        plt.title('Energy vs Temperature')
+        plt.plot(t, energy, 'rx-', linewidth=2)
+        plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
+        plt.ylabel(r'Average Energy per Site $(J)$', fontsize=12)
+        plt.title('Energy vs Temperature', fontsize=14)
+        plt.grid(True, alpha=0.3)
         if save_plots:
             plt.savefig(os.path.join(output_dir, f'energy_vs_temperature.{file_format}'), 
-                       format=file_format, bbox_inches='tight')
+                       format=file_format, bbox_inches='tight', dpi=300)
         
-        # 绘制比热随温度变化图
+        # 绘制比热随温度变化图（英文标签）
         plt.figure()
-        plt.plot(t, specific_heat, 'kx-')
-        plt.xlabel(r'Temperature $(k_BT/J)$')
-        plt.ylabel(r'Specific Heat per Site $(k_B)$')
-        plt.title('Specific Heat vs Temperature')
+        plt.plot(t, specific_heat, 'kx-', linewidth=2)
+        plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
+        plt.ylabel(r'Specific Heat per Site $(k_B)$', fontsize=12)
+        plt.title('Specific Heat vs Temperature', fontsize=14)
+        plt.grid(True, alpha=0.3)
         if save_plots:
             plt.savefig(os.path.join(output_dir, f'specific_heat_vs_temperature.{file_format}'), 
-                       format=file_format, bbox_inches='tight')
+                       format=file_format, bbox_inches='tight', dpi=300)
         
-        # 绘制磁化强度随温度变化图
+        # 绘制磁化强度随温度变化图（英文标签）
         plt.figure()
-        plt.plot(t, magnetization, 'bx-')
-        plt.xlabel(r'Temperature $(k_BT/J)$')
-        plt.ylabel(r'Average Magnetization per Site')
-        plt.title('Magnetization vs Temperature')
+        plt.plot(t, magnetization, 'bx-', linewidth=2)
+        plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
+        plt.ylabel(r'Average Magnetization per Site', fontsize=12)
+        plt.title('Magnetization vs Temperature', fontsize=14)
+        plt.grid(True, alpha=0.3)
         if save_plots:
             plt.savefig(os.path.join(output_dir, f'magnetization_vs_temperature.{file_format}'), 
-                       format=file_format, bbox_inches='tight')
+                       format=file_format, bbox_inches='tight', dpi=300)
         
-        # 绘制磁化率随温度变化图
+        # 绘制磁化率随温度变化图（英文标签）
         plt.figure()
-        plt.plot(t, susceptibility, 'gx-')
-        plt.xlabel(r'Temperature $(k_BT/J)$')
-        plt.ylabel(r'Magnetic Susceptibility $(k_B/J)$')
-        plt.title('Susceptibility vs Temperature')
+        plt.plot(t, susceptibility, 'gx-', linewidth=2)
+        plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
+        plt.ylabel(r'Magnetic Susceptibility $(k_B/J)$', fontsize=12)
+        plt.title('Susceptibility vs Temperature', fontsize=14)
+        plt.grid(True, alpha=0.3)
         if save_plots:
             plt.savefig(os.path.join(output_dir, f'susceptibility_vs_temperature.{file_format}'), 
-                       format=file_format, bbox_inches='tight')
+                       format=file_format, bbox_inches='tight', dpi=300)
         
         if show_plots:
             plt.show()
@@ -720,7 +768,7 @@ class XYModelSimulator:
         
         # 保存配置信息
         config_path = os.path.join(output_dir, 'simulation_config.txt')
-        with open(config_path, 'w') as f:
+        with open(config_path, 'w', encoding='utf-8') as f:
             f.write("XY Model Simulation Configuration\n")
             f.write("================================\n")
             for key, value in self.results['config'].items():

@@ -16,5 +16,5 @@ results = simulator.run_simulation(
 
 # 3. 生成结果
 simulator.plot_results(output_dir='results')          # 绘制物理量图表
-simulator.generate_spin_visualization(output_dir='spin_plots')  # 生成自旋配置图
+simulator.generate_spin_visualization(output_dir='彩色自旋图')  # 生成彩色自旋配置图
 simulator.save_results(filename='simulation_data.txt', output_dir='results')  # 保存数据
