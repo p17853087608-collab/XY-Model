@@ -11,7 +11,7 @@ simulator = XYModelSimulator(
 # 2. 运行模拟（自动生成所有结果到带时间戳的文件夹）
 results = simulator.run_simulation(
     temperature_range=(0.1, 2.5),  # 温度范围
-    num_temperatures=10            # 温度点数
+    num_temperatures=20            # 温度点数
 )
 
 # 3. 获取结果文件夹路径
