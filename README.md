@@ -6,14 +6,10 @@ XY模型模拟器是一个使用Swendsen-Wang聚类算法模拟二维XY模型的
 #### 改动
 1.显示代码运行进度,温度和耗时  
 2.自旋可视化图由彩色图表示   
-3.并行计算包设计  应对大批量数据集生成   
-#### 小结  
-如果没意外  
-不会再有大规模更新了  
-后续就是小修小补救  
+1.并行批量生成自旋图功能（多线程+GPU加速）   
 
 #### 使用指南  
-xy_model_simulator 文件夹是 xy模型模拟器。 包括模型，测试脚本，使用文档  
+xy_model_simulator 文件夹是 xy模型模拟器。 包括模型，并行批量脚本，测试脚本，使用文档  
   
 idea文件夹是 我的灵感来源
 
@@ -24,5 +20,7 @@ environment.yml 是我的工作环境配置
 conda env create -f environment.yml
 ```
 
-simulation_results_xxxx文件夹 保存了我的测试结果  
+simulation_results_xxxx文件夹 保存了我的测试结果   
+
+
 
