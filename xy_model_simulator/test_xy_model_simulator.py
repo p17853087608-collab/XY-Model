@@ -3,6 +3,7 @@ XY模型模拟器测试脚本
 测试进度显示功能、GPU加速、结果文件管理等所有功能
 """
 
+import shutil
 import sys
 import os
 import time
