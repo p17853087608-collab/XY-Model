@@ -141,11 +141,20 @@ class ParallelBatchSpinGenerator:
             
             # 运行模拟（GPU操作会自动异步执行）
             start_time = time.time()
-            results = simulator.run_simulation(
-                temperature_range=temperature_range,
-                num_temperatures=num_temperatures
-            )
+            if config['use_gpu']:
+                import cupy as cp
+                with cp.cuda.stream.Stream(non_blocking=True):  # 异步执行GPU计算
+                    results = simulator.run_simulation(
+                        temperature_range=temperature_range,
+                        num_temperatures=num_temperatures
+                    )
+            else:
+                results = simulator.run_simulation(
+                    temperature_range=temperature_range,
+                    num_temperatures=num_temperatures
+                )
             elapsed_time = time.time() - start_time
+                
             
             # 更新进度
             with self.progress_lock:
@@ -280,7 +289,16 @@ class ParallelBatchSpinGenerator:
         print(f"结果保存目录: {self.batch_output_dir}")
         print(f"汇总报告: {os.path.join(self.batch_output_dir, 'batch_summary.txt')}")
         print(f"{'='*80}")
-
+    def get_batch_summary(self):
+            """获取批量模拟摘要信息"""
+            return {
+                'total_simulations': len(self.simulations),
+                'successful_simulations': sum(1 for r in self.results_summary if r['success']),
+                'failed_simulations': len(self.results_summary) - sum(1 for r in self.results_summary if r['success']),
+                'total_spin_images': sum(r['spin_configs_generated'] for r in self.results_summary if r['success']),
+                'batch_output_dir': self.batch_output_dir,
+                'total_time': time.time() - self.start_time
+                }
 # 示例使用
 if __name__ == "__main__":
     # 创建并行批量生成器（大规模任务配置）
