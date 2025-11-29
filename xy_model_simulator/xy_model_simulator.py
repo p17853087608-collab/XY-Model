@@ -699,7 +699,7 @@ class XYModelSimulator:
         
         # 绘制能量随温度变化图
         plt.figure()
-        plt.plot(t, energy, 'rx-', linewidth=2)
+        plt.plot(t, energy, 'r-', linewidth=2)
         plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
         plt.ylabel(r'Average Energy per Site $(J)$', fontsize=12)
         plt.title('Energy vs Temperature', fontsize=14)
@@ -709,7 +709,7 @@ class XYModelSimulator:
         
         # 绘制比热随温度变化图
         plt.figure()
-        plt.plot(t, specific_heat, 'kx-', linewidth=2)
+        plt.plot(t, specific_heat, 'k-', linewidth=2)
         plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
         plt.ylabel(r'Specific Heat per Site $(k_B)$', fontsize=12)
         plt.title('Specific Heat vs Temperature', fontsize=14)
@@ -719,7 +719,7 @@ class XYModelSimulator:
         
         # 绘制磁化强度随温度变化图
         plt.figure()
-        plt.plot(t, magnetization, 'bx-', linewidth=2)
+        plt.plot(t, magnetization, 'b-', linewidth=2)
         plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
         plt.ylabel(r'Average Magnetization per Site', fontsize=12)
         plt.title('Magnetization vs Temperature', fontsize=14)
@@ -729,7 +729,7 @@ class XYModelSimulator:
         
         # 绘制磁化率随温度变化图
         plt.figure()
-        plt.plot(t, susceptibility, 'gx-', linewidth=2)
+        plt.plot(t, susceptibility, 'g-', linewidth=2)
         plt.xlabel(r'Temperature $(k_BT/J)$', fontsize=12)
         plt.ylabel(r'Magnetic Susceptibility $(k_B/J)$', fontsize=12)
         plt.title('Susceptibility vs Temperature', fontsize=14)
