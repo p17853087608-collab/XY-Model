@@ -29,7 +29,7 @@ batch_generator.generate_all_simulations()
 # 运行并行模拟（生成大量自旋图）
 batch_generator.run_all_simulations_parallel(
     temperature_range=(0.1, 2.0),  # 温度范围
-    num_temperatures=25            # 温度点数量
+    num_temperatures=10            # 温度点数量
 )
 
 # 获取批量模拟汇总信息
