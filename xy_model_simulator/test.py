@@ -5,7 +5,7 @@ batch_generator = ParallelBatchSpinGenerator(
     base_config={
         'lattice_size': 32,          # 晶格大小
         'equilibrium_steps': 2000,   # 平衡步数
-        'measurement_steps': 20000,  # 测量步数
+        'measurement_steps': 2000,  # 测量步数
         'use_gpu': True,            # 启用GPU加速
         'random_seed': None         # 随机种子（自动生成）
     },
@@ -15,7 +15,7 @@ batch_generator = ParallelBatchSpinGenerator(
 # 定义参数网格（多组参数组合）
 parameter_grid = {
     'lattice_size': [32],        # 不同晶格大小
-    'measurement_steps': [20000],   # 不同测量步数
+    'measurement_steps': [2000],   # 不同测量步数
     'use_gpu': [True]                    # 启用GPU加速
 }
 
@@ -28,8 +28,8 @@ batch_generator.generate_all_simulations()
 
 # 运行并行模拟（生成大量自旋图）
 batch_generator.run_all_simulations_parallel(
-    temperature_range=(0.1, 2.0),  # 温度范围
-    num_temperatures=10            # 温度点数量
+    temperature_range=(0.1, 2.5),  # 温度范围
+    num_temperatures=500            # 温度点数量
 )
 
 # 获取批量模拟汇总信息

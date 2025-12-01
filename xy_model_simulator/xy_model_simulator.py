@@ -25,9 +25,7 @@ except ImportError:
 
 class XYModelSimulator:
     """
-    XY模型模拟器类：使用Swendsen-Wang算法进行蒙特卡洛模拟（GPU加速版）
-    
-    该模拟器支持CPU和GPU加速计算，能够高效计算不同温度下的物理量，如能量、磁化强度、比热和磁化率等。
+    XY模型模拟器类：使用Swendsen-Wang算法进行蒙特卡洛模拟
     """
     
     def __init__(self, lattice_size: int = 16, equilibrium_steps: int = 1000, 

@@ -324,7 +324,7 @@ if __name__ == "__main__":
     batch_generator.define_parameter_grid(parameter_grid)
     batch_generator.generate_all_simulations()
     
-    # 运行并行模拟（生成数十个温度点的上万张图片）
+    # 运行并行模拟
     batch_generator.run_all_simulations_parallel(
         temperature_range=(0.1, 4.0),  # 温度范围
         num_temperatures=50            # 每个模拟生成50个温度点的自旋图
