@@ -949,8 +949,8 @@ if __name__ == "__main__":
     # 创建极致优化版本的模拟器
     simulator = XYModelSimulatorUltraOptimized(
         lattice_size=16,
-        equilibrium_steps=500,
-        measurement_steps=1000,
+        equilibrium_steps=1000,
+        measurement_steps=20000,
         random_seed=42,
         use_gpu=False
     )
@@ -967,14 +967,3 @@ if __name__ == "__main__":
     timing_data = results.get('timing', {})
     if 'avg_time_per_temp' in timing_data:
         print(f"平均每温度点耗时: {timing_data['avg_time_per_temp']:.2f}秒")
-    
-    print(f"\n极致优化特性:")
-    print("- ✅ 超级内存池管理（智能预分配和LRU缓存）")
-    print("- ✅ JIT编译加速（Numba核心函数）" if numba_available else "- ⚠️ JIT编译加速（Numba未安装）")
-    print("- ✅ 向量化操作极致优化")
-    print("- ✅ 缓存友好的数据布局")
-    print("- ✅ 批量处理优化")
-    print("- ✅ 算法级优化")
-    print("- ✅ 三角函数查找表加速")
-    print("- ✅ 工作数组预分配")
-    print("- ✅ 纯CPU计算，无需GPU支持")
