@@ -1,7 +1,7 @@
 from xy_model_simulator_ultra_optimized import XYModelSimulatorUltraOptimized
 simulator = XYModelSimulatorUltraOptimized(
     lattice_size=16,
-    equilibrium_steps=5000,
+    equilibrium_steps=10000,
     measurement_steps=20000,
     interaction_constant=1.0,
     random_seed=123,
