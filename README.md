@@ -12,13 +12,6 @@ RGB8-HPC是我目前在用的版本
 ## 使用指南
 `xy_model_simulator` 文件夹是XY模型模拟器，包括模型、并行批量脚本、测试脚本和使用文档。
 
-`idea` 文件夹是我的灵感来源。
-
-`environment.yml` 是我的工作环境配置。在另一台机器上，使用该YAML文件可以重新创建出完全相同的环境。  
-核心命令 (恢复):  
-```bash
-conda env create -f environment.yml
-```
 
 `simulation_results_xxxx` 文件夹保存了我的测试结果。
 
