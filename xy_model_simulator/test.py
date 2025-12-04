@@ -4,7 +4,7 @@ simulator = XYModelSimulator(
     equilibrium_steps=2000,
     measurement_steps=20000,
     interaction_constant=1.0,
-    random_seed=123,
+    random_seed=None,
     use_gpu=False,
 )
 

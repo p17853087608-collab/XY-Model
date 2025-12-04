@@ -719,7 +719,7 @@ class XYModelSimulator:
         
         # 创建RGB彩色图像
         hue = (spin_config % self.two_pi) / self.two_pi
-        saturation = 0.3 + 0.7 * magnetization
+        saturation = 1.0
         value = 0.9
         
         # 创建HSV图像并转换为RGB
@@ -749,20 +749,20 @@ class XYModelSimulator:
         plt.ylim(-0.5, self.L - 0.5)
         
         # 添加标题和物理量信息
-        title_text = f'XY Model Spin Configuration (Optimized, Temperature = {temperature:.3f})'
-        info_text = f'Magnetization: {magnetization:.4f}\nSusceptibility: {susceptibility:.4f}'
+        # title_text = f'XY Model Spin Configuration (Optimized, Temperature = {temperature:.3f})'
+        # # info_text = f'Magnetization: {magnetization:.4f}\nSusceptibility: {susceptibility:.4f}'
         
-        plt.title(title_text, fontsize=16, pad=20)
-        plt.text(0.02, 0.98, info_text, transform=ax.transAxes, 
-                 verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
-                 fontsize=12)
+        # plt.title(title_text, fontsize=16, pad=20)
+        # plt.text(0.02, 0.98, info_text, transform=ax.transAxes, 
+        #          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
+        #          fontsize=12)
         
         # 添加颜色条说明
-        cbar_text = 'Color represents spin orientation:\nRed: 0°, Yellow: 90°, Green: 180°, Blue: 270°'
-        plt.text(0.98, 0.02, cbar_text, transform=ax.transAxes, 
-                 horizontalalignment='right', verticalalignment='bottom',
-                 bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8),
-                 fontsize=10)
+        # cbar_text = 'Color represents spin orientation:\nRed: 0°, Yellow: 90°, Green: 180°, Blue: 270°'
+        # plt.text(0.98, 0.02, cbar_text, transform=ax.transAxes, 
+        #          horizontalalignment='right', verticalalignment='bottom',
+        #          bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8),
+        #          fontsize=10)
         
         # 保存图片
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
