@@ -149,18 +149,10 @@ class XYModelSimulator:
         self.l_squared = self.L ** 2
         self.inv_l_squared = 1.0 / self.l_squared
         
-        # 生成唯一的结果文件夹名称（基于时间戳）
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.base_output_dir = f"simulation_results_{timestamp}"
-        
-        # 创建主结果文件夹
-        os.makedirs(self.base_output_dir, exist_ok=True)
-        
-        # 创建子文件夹
-        self.figures_dir = os.path.join(self.base_output_dir, "figures")
-        self.spin_dir = os.path.join(self.base_output_dir, "spin_configurations")
-        os.makedirs(self.figures_dir, exist_ok=True)
-        os.makedirs(self.spin_dir, exist_ok=True)
+        # 初始化输出目录变量（稍后创建）
+        self.base_output_dir = None
+        self.figures_dir = None
+        self.spin_dir = None
     
     def _setup_boundary_arrays(self):
         """预计算周期性边界索引数组以提高性能"""
@@ -687,6 +679,20 @@ class XYModelSimulator:
             'config': self.config.copy(),
             'timing': self.timing_data
         }
+        
+        # 生成唯一的结果文件夹名称（基于时间戳 + 随机数）
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        random_suffix = np.random.randint(1000, 9999)  # 生成4位随机数
+        self.base_output_dir = f"simulation_results_{timestamp}_{random_suffix}"
+        
+        # 创建主结果文件夹
+        os.makedirs(self.base_output_dir, exist_ok=True)
+        
+        # 创建子文件夹
+        self.figures_dir = os.path.join(self.base_output_dir, "figures")
+        self.spin_dir = os.path.join(self.base_output_dir, "spin_configurations")
+        os.makedirs(self.figures_dir, exist_ok=True)
+        os.makedirs(self.spin_dir, exist_ok=True)
         
         # 自动生成所有输出
         self.plot_results()
