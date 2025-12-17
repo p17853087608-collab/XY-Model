@@ -10,8 +10,8 @@ simulator = XYModelSimulator(
 
 # 相变区域精细扫描
 results = simulator.run_simulation(
-    temperature_range=(0.1, 3.0),
-    num_temperatures=10
+    temperature_range=(0.1, 0.8),
+    num_temperatures=500
 )
 
 print(f"模拟完成，结果保存在: {simulator.get_output_directory()}")
