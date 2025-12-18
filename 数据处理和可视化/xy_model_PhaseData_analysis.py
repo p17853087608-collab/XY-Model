@@ -25,7 +25,7 @@ rcParams['ytick.labelsize'] = 10
 
 def extract_temperature_from_filename(filename):
     """从文件名中提取温度值"""
-    match = re.search(r'T_(\d+\.\d+)', filename)
+    match = re.search(r't_(\d+\.\d+)', filename)
     if match:
         return float(match.group(1))
     return None
@@ -35,13 +35,13 @@ def create_test_folders():
     print("正在扫描温度值...")
     
     # 获取所有PNG文件（当前目录的仿真结果）
-    png_files = glob.glob("./simulation_results_*/spin_configurations/*.png")
+    png_files = glob.glob("./simulation_results_*/spin_configurations/generated_visualizations/*.png")
     
     # 提取所有唯一的温度值
     temperatures = set()
     for png_file in png_files:
         filename = os.path.basename(png_file)
-        match = re.search(r'T_(\d+\.\d+)', filename)
+        match = re.search(r't_(\d+\.\d+)', filename)
         if match:
             temperatures.add(float(match.group(1)))
     
@@ -77,7 +77,7 @@ def copy_all_images():
     print("正在复制图片文件...")
     
     # 获取所有PNG文件（当前目录的仿真结果）
-    png_files = glob.glob("./simulation_results_*/spin_configurations/*.png")
+    png_files = glob.glob("./simulation_results_*/spin_configurations/generated_visualizations/*.png")
     
     # 获取test文件夹中的所有文件夹
     test_base_dir = "./test"
