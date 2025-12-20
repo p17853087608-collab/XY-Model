@@ -53,7 +53,7 @@ def visualize_single_spin(args: Tuple[str, np.ndarray, str, str]) -> Tuple[str, 
             
             # 创建纯净图片 - 无边框、无标题、无颜色条
             fig, ax = plt.subplots(figsize=(6, 6))
-            ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
+            ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1, interpolation='bilinear')
             
             # 移除所有冗杂信息
             ax.set_xticks([])
@@ -77,7 +77,7 @@ def visualize_single_spin(args: Tuple[str, np.ndarray, str, str]) -> Tuple[str, 
                 grayscale = angles / (2 * np.pi)
                 
                 fig, ax = plt.subplots(figsize=(6, 6))
-                ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
+                ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1, interpolation='bilinear')
                 
                 # 移除所有冗杂信息
                 ax.set_xticks([])
@@ -110,7 +110,7 @@ class SpinConfigurationVisualizer:
         self.enable_parallel = enable_parallel
         # 默认使用CPU核心数，但最多不超过8个进程（避免内存问题）
         if max_workers is None:
-            self.max_workers = min(mp.cpu_count(), 8)
+            self.max_workers = min(mp.cpu_count(), 12)
         else:
             self.max_workers = max_workers
         
@@ -285,7 +285,7 @@ class SpinConfigurationVisualizer:
                 
                 # 创建纯净图片 - 无边框、无标题、无颜色条
                 fig, ax = plt.subplots(figsize=(6, 6))
-                ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
+                ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1, interpolation='bilinear')
                 
                 # 移除所有冗杂信息
                 ax.set_xticks([])
@@ -309,7 +309,7 @@ class SpinConfigurationVisualizer:
                     grayscale = angles / (2 * np.pi)
                     
                     fig, ax = plt.subplots(figsize=(6, 6))
-                    ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
+                    ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1, interpolation='bilinear')
                     
                     # 移除所有冗杂信息
                     ax.set_xticks([])
