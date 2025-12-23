@@ -220,6 +220,151 @@ class OptimizedUnionFind:
             self.parent[i] = self.find(i)
 
 
+class MultiIndicatorConvergenceDetector:
+    """多指标收敛检测器，提供高精度收敛判断"""
+    
+    def __init__(self, window_size: int = 20, confidence_level: float = 0.95):
+        self.window_size = window_size
+        self.confidence_level = confidence_level
+        self.energy_history = []
+        self.magnetization_history = []
+        
+    def get_temperature_adaptive_thresholds(self, temperature: float) -> Dict[str, float]:
+        """根据温度自适应调整收敛阈值"""
+        # 不同温度区域的收敛特性不同
+        if temperature < 0.5:  # 低温区：收敛快但涨落小
+            energy_threshold = 0.005  # 更严格的能量阈值
+            mag_threshold = 0.02      # 磁化强度阈值相对宽松
+            trend_threshold = 0.01     # 趋势阈值
+        elif temperature < 1.5:  # 临界区：涨落大，需要宽松阈值
+            energy_threshold = 0.02   # 能量阈值放宽
+            mag_threshold = 0.05     # 磁化强度阈值放宽
+            trend_threshold = 0.02   # 趋势阈值放宽
+        else:  # 高温区：收敛慢，需要更长时间
+            energy_threshold = 0.015  # 中等能量阈值
+            mag_threshold = 0.03     # 中等磁化强度阈值
+            trend_threshold = 0.015  # 中等趋势阈值
+            
+        return {
+            'energy_relative_std': energy_threshold,
+            'magnetization_relative_std': mag_threshold,
+            'trend_slope': trend_threshold,
+            'autocorrelation': 0.3  # 自相关系数阈值
+        }
+    
+    def calculate_advanced_statistics(self, data: np.ndarray) -> Dict[str, float]:
+        """计算高级统计指标"""
+        if len(data) < 5:
+            return {'mean': 0, 'std': 0, 'trend_slope': 0, 'autocorr': 0}
+            
+        # 基本统计量
+        mean = np.mean(data)
+        std = np.std(data)
+        
+        # 趋势分析（线性回归斜率）
+        x = np.arange(len(data))
+        if len(x) > 1:
+            coeffs = np.polyfit(x, data, 1)
+            trend_slope = abs(coeffs[0]) / (abs(mean) + 1e-10)  # 相对斜率
+        else:
+            trend_slope = 0
+        
+        # 自相关分析（滞后1）
+        if len(data) > 1:
+            data_centered = data - mean
+            autocorr = np.corrcoef(data_centered[:-1], data_centered[1:])[0, 1]
+            autocorr = 0 if np.isnan(autocorr) else abs(autocorr)
+        else:
+            autocorr = 0
+            
+        return {
+            'mean': mean,
+            'std': std,
+            'trend_slope': trend_slope,
+            'autocorr': autocorr
+        }
+    
+    def check_convergence(self, energy: float, magnetization: float, temperature: float) -> Dict[str, Any]:
+        """多指标收敛检测"""
+        # 添加新数据点
+        self.energy_history.append(energy)
+        self.magnetization_history.append(magnetization)
+        
+        # 保持窗口大小
+        if len(self.energy_history) > self.window_size:
+            self.energy_history.pop(0)
+        if len(self.magnetization_history) > self.window_size:
+            self.magnetization_history.pop(0)
+        
+        # 数据不足，无法判断
+        if len(self.energy_history) < 10:
+            return {
+                'converged': False,
+                'confidence': 0.0,
+                'reason': '数据点不足',
+                'details': {}
+            }
+        
+        # 获取温度自适应阈值
+        thresholds = self.get_temperature_adaptive_thresholds(temperature)
+        
+        # 计算能量统计
+        energy_stats = self.calculate_advanced_statistics(np.array(self.energy_history))
+        mag_stats = self.calculate_advanced_statistics(np.array(self.magnetization_history))
+        
+        # 能量收敛判断
+        energy_relative_std = energy_stats['std'] / (abs(energy_stats['mean']) + 1e-10)
+        energy_converged = (energy_relative_std < thresholds['energy_relative_std'] and
+                          energy_stats['trend_slope'] < thresholds['trend_slope'] and
+                          energy_stats['autocorr'] < thresholds['autocorrelation'])
+        
+        # 磁化强度收敛判断
+        mag_relative_std = mag_stats['std'] / (abs(mag_stats['mean']) + 1e-10)
+        mag_converged = (mag_relative_std < thresholds['magnetization_relative_std'] and
+                        mag_stats['trend_slope'] < thresholds['trend_slope'] and
+                        mag_stats['autocorr'] < thresholds['autocorrelation'])
+        
+        # 综合收敛判断（两个指标都收敛才认为收敛）
+        converged = energy_converged and mag_converged
+        
+        # 计算置信度
+        confidence = 0.0
+        if converged:
+            energy_conf = min(1.0, (thresholds['energy_relative_std'] - energy_relative_std) / thresholds['energy_relative_std'])
+            mag_conf = min(1.0, (thresholds['magnetization_relative_std'] - mag_relative_std) / thresholds['magnetization_relative_std'])
+            confidence = (energy_conf + mag_conf) / 2
+        else:
+            # 部分收敛也给出部分置信度
+            if energy_converged or mag_converged:
+                confidence = 0.3
+            else:
+                confidence = 0.1
+        
+        details = {
+            'energy_relative_std': energy_relative_std,
+            'magnetization_relative_std': mag_relative_std,
+            'energy_trend': energy_stats['trend_slope'],
+            'mag_trend': mag_stats['trend_slope'],
+            'energy_autocorr': energy_stats['autocorr'],
+            'mag_autocorr': mag_stats['autocorr'],
+            'thresholds': thresholds
+        }
+        
+        reason = '多指标收敛' if converged else '未收敛'
+        
+        return {
+            'converged': converged,
+            'confidence': confidence,
+            'reason': reason,
+            'details': details
+        }
+    
+    def reset(self):
+        """重置检测器状态"""
+        self.energy_history.clear()
+        self.magnetization_history.clear()
+
+
 class ParallelXYModelSimulator:
     """
     并行XY模型模拟器类：使用Swendsen-Wang算法进行蒙特卡洛模拟
@@ -685,29 +830,54 @@ class ParallelXYModelSimulator:
         return energy, magnetization
     
     def _run_temperature_ultra_optimized(self, temperature: float) -> Dict[str, Any]:
-        """运行单个温度点的超优化模拟"""
+        """运行单个温度点的超优化模拟，集成多指标收敛检测"""
         try:
             xy = self._initialize_spins()
             
             # === 超优化热化阶段 ===
-            convergence_window = min(200, self.ESTEP // 5)
-            energy_history = []
-            convergence_threshold = 0.01
+            # 初始化多指标收敛检测器
+            convergence_detector = MultiIndicatorConvergenceDetector(
+                window_size=min(30, self.ESTEP // 4), 
+                confidence_level=0.95
+            )
             
-            # 自适应批处理
-            if self.ESTEP < 500:
-                batch_size = 1
-                update_freq = 50
-            elif self.ESTEP < 2000:
-                batch_size = 5
-                update_freq = 100
-            else:
-                batch_size = 10
-                update_freq = 200
+            # 自适应批处理（根据温度优化）
+            if temperature < 0.5:  # 低温区收敛快
+                if self.ESTEP < 500:
+                    batch_size = 2
+                    update_freq = 25
+                elif self.ESTEP < 2000:
+                    batch_size = 8
+                    update_freq = 50
+                else:
+                    batch_size = 15
+                    update_freq = 100
+            elif temperature < 1.5:  # 临界区需要更精细检测
+                if self.ESTEP < 500:
+                    batch_size = 1
+                    update_freq = 20
+                elif self.ESTEP < 2000:
+                    batch_size = 3
+                    update_freq = 40
+                else:
+                    batch_size = 5
+                    update_freq = 80
+            else:  # 高温区
+                if self.ESTEP < 500:
+                    batch_size = 1
+                    update_freq = 30
+                elif self.ESTEP < 2000:
+                    batch_size = 5
+                    update_freq = 60
+                else:
+                    batch_size = 10
+                    update_freq = 120
             
             actual_eq_steps = 0
             consecutive_converged = 0
-            min_equilibrium = max(100, self.ESTEP // 4)
+            high_confidence_count = 0
+            min_equilibrium = max(150, self.ESTEP // 3)  # 更严格的最低要求
+            convergence_log = []  # 记录收敛过程
             
             for step in range(0, self.ESTEP, batch_size):
                 actual_batch = min(batch_size, self.ESTEP - step)
@@ -717,26 +887,47 @@ class ParallelXYModelSimulator:
                 
                 actual_eq_steps += actual_batch
                 
-                # 动态收敛检测
-                if (actual_eq_steps > self.ESTEP // 2 and 
-                    actual_eq_steps % update_freq == 0 and
-                    len(energy_history) < convergence_window):
+                # 增强的多指标收敛检测
+                if (actual_eq_steps > self.ESTEP // 3 and  # 更早开始检测
+                    actual_eq_steps % update_freq == 0):
                     
-                    energy, _ = self._calculate_energy_magnetization_vectorized(xy)
-                    energy_history.append(energy * self.inv_l_squared)
+                    energy, magnetization = self._calculate_energy_magnetization_vectorized(xy)
+                    energy_normalized = energy * self.inv_l_squared
                     
-                    if len(energy_history) >= 10:
-                        recent_std = np.std(energy_history[-10:])
-                        recent_mean = np.mean(energy_history[-10:])
-                        
-                        if recent_std / abs(recent_mean) < convergence_threshold:
-                            consecutive_converged += 1
-                            if consecutive_converged >= 3:
+                    # 执行多指标收敛检测
+                    convergence_result = convergence_detector.check_convergence(
+                        energy_normalized, magnetization, temperature
+                    )
+                    
+                    # 记录收敛过程
+                    convergence_log.append({
+                        'step': actual_eq_steps,
+                        'energy': energy_normalized,
+                        'magnetization': magnetization,
+                        'converged': convergence_result['converged'],
+                        'confidence': convergence_result['confidence'],
+                        'reason': convergence_result['reason']
+                    })
+                    
+                    # 高置信度收敛判断
+                    if convergence_result['converged']:
+                        if convergence_result['confidence'] > 0.8:
+                            high_confidence_count += 1
+                            if high_confidence_count >= 2:  # 连续2次高置信度
                                 remaining_steps = self.ESTEP - actual_eq_steps
                                 if remaining_steps > min_equilibrium:
+                                    print(f"温度 {temperature:.3f} 在 {actual_eq_steps} 步达到高置信度收敛")
                                     break
                         else:
-                            consecutive_converged = 0
+                            consecutive_converged += 1
+                            if consecutive_converged >= 3:  # 连续3次收敛
+                                remaining_steps = self.ESTEP - actual_eq_steps
+                                if remaining_steps > min_equilibrium:
+                                    print(f"温度 {temperature:.3f} 在 {actual_eq_steps} 步达到收敛")
+                                    break
+                    else:
+                        consecutive_converged = 0
+                        high_confidence_count = 0
             
             # === 超优化测量阶段 ===
             sampling_interval = max(1, self.STEP // 1000)
@@ -797,11 +988,31 @@ class ParallelXYModelSimulator:
                 xy = self._initialize_spins()
             
             # 内存优化清理
-            del energy_history, valid_energy, valid_magnetization
+            del valid_energy, valid_magnetization
+            if 'convergence_detector' in locals():
+                convergence_detector.reset()
             import gc
             gc.collect()
             
             xy_cpu = xy.copy() if hasattr(xy, 'copy') else np.array(xy)
+            
+            # 提取收敛信息
+            final_convergence_info = {}
+            if len(convergence_log) > 0:
+                final_log = convergence_log[-1]
+                final_convergence_info = {
+                    'converged': final_log['converged'],
+                    'confidence': final_log['confidence'],
+                    'reason': final_log['reason'],
+                    'detection_steps': len(convergence_log)
+                }
+            else:
+                final_convergence_info = {
+                    'converged': False,
+                    'confidence': 0.0,
+                    'reason': '未进行收敛检测',
+                    'detection_steps': 0
+                }
             
             return {
                 'temperature': temperature,
@@ -811,7 +1022,9 @@ class ParallelXYModelSimulator:
                 'specific_heat': specific_heat,
                 'spin_config': xy_cpu,
                 'actual_equilibrium_steps': actual_eq_steps,
-                'actual_measurements': actual_measurements
+                'actual_measurements': actual_measurements,
+                'convergence_info': final_convergence_info,
+                'convergence_log': convergence_log[-5:] if len(convergence_log) > 5 else convergence_log
             }
             
         except Exception as e:
@@ -901,6 +1114,13 @@ def run_single_temperature_parallel(args):
             'spin_config': np.zeros((config_dict['lattice_size'], config_dict['lattice_size'])),
             'actual_equilibrium_steps': 0,
             'actual_measurements': 0,
+            'convergence_info': {
+                'converged': False,
+                'confidence': 0.0,
+                'reason': '处理错误',
+                'detection_steps': 0
+            },
+            'convergence_log': [],
             'original_index': idx,
             'process_id': process_id
         }, str(e)
@@ -1025,7 +1245,12 @@ class ParallelXYModelSimulator(ParallelXYModelSimulator):
                         except Exception as e:
                             print(f"保存自旋配置时出错: {e}")
                         
-                        print(f"完成温度 {result['temperature']:.3f} (进度: {len(completed_indices)}/{num_temperatures})")
+                        # 显示收敛信息
+                        convergence_info = result.get('convergence_info', {})
+                        if convergence_info.get('converged', False):
+                            print(f"完成温度 {result['temperature']:.3f} - 收敛成功 (置信度: {convergence_info.get('confidence', 0):.2f})")
+                        else:
+                            print(f"完成温度 {result['temperature']:.3f} - 未收敛 (进度: {len(completed_indices)}/{num_temperatures})")
                     
                     else:
                         print(f"温度点 {idx} 处理失败: {error}")
@@ -1196,7 +1421,50 @@ class ParallelXYModelSimulator(ParallelXYModelSimulator):
                 f.write(f"  能量范围: {energy.min():.6f} - {energy.max():.6f}\n")
                 f.write(f"  磁化强度范围: {mag.min():.6f} - {mag.max():.6f}\n")
                 f.write(f"  磁化率峰值: {sus.max():.6f} (在T={temps[sus.argmax()]:.3f})\n")
-                f.write(f"  比热峰值: {heat.max():.6f} (在T={temps[heat.argmax()]:.3f})\n\n")
+                f.write(f"  比热峰值: {heat.max():.6f} (在T={temps[heat.argmax()]:.3f})\n")
+                
+                # 收敛检测分析
+                if 'detailed_results' in self.results and len(self.results['detailed_results']) > 0:
+                    detailed_results = self.results['detailed_results']
+                    converged_count = sum(1 for r in detailed_results if r.get('convergence_info', {}).get('converged', False))
+                    total_count = len(detailed_results)
+                    convergence_rate = converged_count / total_count * 100
+                    
+                    avg_confidence = 0.0
+                    if converged_count > 0:
+                        confidences = [r.get('convergence_info', {}).get('confidence', 0) 
+                                     for r in detailed_results if r.get('convergence_info', {}).get('converged', False)]
+                        avg_confidence = np.mean(confidences) if confidences else 0.0
+                    
+                    f.write(f"\n智能收敛检测分析:\n")
+                    f.write(f"  总温度点数: {total_count}\n")
+                    f.write(f"  成功收敛点数: {converged_count}\n")
+                    f.write(f"  收敛成功率: {convergence_rate:.1f}%\n")
+                    f.write(f"  平均收敛置信度: {avg_confidence:.3f}\n")
+                    
+                    # 按温度区域分析收敛情况
+                    low_temp_results = [r for r in detailed_results if r['temperature'] < 0.5]
+                    critical_temp_results = [r for r in detailed_results if 0.5 <= r['temperature'] < 1.5]
+                    high_temp_results = [r for r in detailed_results if r['temperature'] >= 1.5]
+                    
+                    def analyze_convergence_by_region(results, region_name):
+                        if len(results) == 0:
+                            return
+                        converged = sum(1 for r in results if r.get('convergence_info', {}).get('converged', False))
+                        rate = converged / len(results) * 100
+                        if converged > 0:
+                            confidences = [r.get('convergence_info', {}).get('confidence', 0) 
+                                         for r in results if r.get('convergence_info', {}).get('converged', False)]
+                            avg_conf = np.mean(confidences) if confidences else 0.0
+                            f.write(f"  {region_name}: {converged}/{len(results)} ({rate:.1f}%), 平均置信度: {avg_conf:.3f}\n")
+                        else:
+                            f.write(f"  {region_name}: {converged}/{len(results)} ({rate:.1f}%)\n")
+                    
+                    analyze_convergence_by_region(low_temp_results, "低温区(T<0.5)")
+                    analyze_convergence_by_region(critical_temp_results, "临界区(0.5≤T<1.5)")
+                    analyze_convergence_by_region(high_temp_results, "高温区(T≥1.5)")
+                
+                f.write("\n")
                 
                 # 临界温度估计
                 tc_sus = temps[sus.argmax()]
@@ -1207,7 +1475,7 @@ class ParallelXYModelSimulator(ParallelXYModelSimulator):
                 f.write(f"  磁化率峰值法: Tc = {tc_sus:.3f}\n")
                 f.write(f"  比热峰值法: Tc = {tc_heat:.3f}\n")
                 f.write(f"  平均估计: Tc = {tc_estimate:.3f}\n")
-                f.write(f"  (理论值: Tc ≈ {self.interaction_constant * 0.89:.3f})\n\n")
+                f.write(f"  (理论值: Tc ≈ {self.J * 0.89:.3f})\n\n")
                 
                 # 相变分析
                 f.write("相变分析:\n")
