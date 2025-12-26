@@ -1064,7 +1064,7 @@ class ProcessXYModelSimulator(ParallelXYModelSimulator):
         
         # 设置进程独立的随机种子
         if random_seed is not None:
-            process_seed = random_seed + process_id * 10000
+            process_seed = random_seed + process_id * 1000  # 使用更大的间隔
             np.random.seed(process_seed)
             self.process_seed = process_seed
         else:
@@ -1209,7 +1209,7 @@ class ParallelXYModelSimulator(ParallelXYModelSimulator):
             'use_gpu': self.use_gpu
         }
         
-        tasks = [(idx, temp, config_dict, idx % self.num_processes) 
+        tasks = [(idx, temp, config_dict, idx) 
                 for idx, temp in enumerate(temperature_array)]
         
         # 使用ProcessPoolExecutor进行并行计算
