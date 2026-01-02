@@ -1,0 +1,59 @@
+Spin Configuration Visualization Report
+========================================
+Source folder: c:\Users\Osako2529\Desktop\脚本包\科研绘图\有序
+Output folder: c:\Users\Osako2529\Desktop\脚本包\科研绘图\有序\generated_visualizations
+Total configurations found: 50
+Successfully generated: 50
+Failed: 0
+
+Generated files:
+- spin_vis_spin_config_t_0.001_raw.npy.pdf
+- spin_vis_spin_config_t_0.003_raw.npy.pdf
+- spin_vis_spin_config_t_0.005_raw.npy.pdf
+- spin_vis_spin_config_t_0.007_raw.npy.pdf
+- spin_vis_spin_config_t_0.009_raw.npy.pdf
+- spin_vis_spin_config_t_0.011_raw.npy.pdf
+- spin_vis_spin_config_t_0.013_raw.npy.pdf
+- spin_vis_spin_config_t_0.015_raw.npy.pdf
+- spin_vis_spin_config_t_0.017_raw.npy.pdf
+- spin_vis_spin_config_t_0.019_raw.npy.pdf
+- spin_vis_spin_config_t_0.021_raw.npy.pdf
+- spin_vis_spin_config_t_0.023_raw.npy.pdf
+- spin_vis_spin_config_t_0.025_raw.npy.pdf
+- spin_vis_spin_config_t_0.027_raw.npy.pdf
+- spin_vis_spin_config_t_0.029_raw.npy.pdf
+- spin_vis_spin_config_t_0.031_raw.npy.pdf
+- spin_vis_spin_config_t_0.033_raw.npy.pdf
+- spin_vis_spin_config_t_0.035_raw.npy.pdf
+- spin_vis_spin_config_t_0.037_raw.npy.pdf
+- spin_vis_spin_config_t_0.039_raw.npy.pdf
+- spin_vis_spin_config_t_0.041_raw.npy.pdf
+- spin_vis_spin_config_t_0.043_raw.npy.pdf
+- spin_vis_spin_config_t_0.045_raw.npy.pdf
+- spin_vis_spin_config_t_0.047_raw.npy.pdf
+- spin_vis_spin_config_t_0.049_raw.npy.pdf
+- spin_vis_spin_config_t_0.052_raw.npy.pdf
+- spin_vis_spin_config_t_0.054_raw.npy.pdf
+- spin_vis_spin_config_t_0.056_raw.npy.pdf
+- spin_vis_spin_config_t_0.058_raw.npy.pdf
+- spin_vis_spin_config_t_0.060_raw.npy.pdf
+- spin_vis_spin_config_t_0.062_raw.npy.pdf
+- spin_vis_spin_config_t_0.064_raw.npy.pdf
+- spin_vis_spin_config_t_0.066_raw.npy.pdf
+- spin_vis_spin_config_t_0.068_raw.npy.pdf
+- spin_vis_spin_config_t_0.070_raw.npy.pdf
+- spin_vis_spin_config_t_0.072_raw.npy.pdf
+- spin_vis_spin_config_t_0.074_raw.npy.pdf
+- spin_vis_spin_config_t_0.076_raw.npy.pdf
+- spin_vis_spin_config_t_0.078_raw.npy.pdf
+- spin_vis_spin_config_t_0.080_raw.npy.pdf
+- spin_vis_spin_config_t_0.082_raw.npy.pdf
+- spin_vis_spin_config_t_0.084_raw.npy.pdf
+- spin_vis_spin_config_t_0.086_raw.npy.pdf
+- spin_vis_spin_config_t_0.088_raw.npy.pdf
+- spin_vis_spin_config_t_0.090_raw.npy.pdf
+- spin_vis_spin_config_t_0.092_raw.npy.pdf
+- spin_vis_spin_config_t_0.094_raw.npy.pdf
+- spin_vis_spin_config_t_0.096_raw.npy.pdf
+- spin_vis_spin_config_t_0.098_raw.npy.pdf
+- spin_vis_spin_config_t_0.100_raw.npy.pdf

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # 读取数据
-df = pd.read_csv('overall_summary.csv')
+df = pd.read_csv('save_data\overall_summary.csv')
 
 # 设置中文字体
 plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans']
