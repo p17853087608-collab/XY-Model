@@ -256,24 +256,46 @@ class MultiIndicatorConvergenceDetector:
         """计算高级统计指标"""
         if len(data) < 5:
             return {'mean': 0, 'std': 0, 'trend_slope': 0, 'autocorr': 0}
-            
+        
+        # 检查数据有效性
+        if not np.all(np.isfinite(data)):
+            return {'mean': 0, 'std': 0, 'trend_slope': 0, 'autocorr': 0}
+        
         # 基本统计量
-        mean = np.mean(data)
-        std = np.std(data)
+        try:
+            mean = float(np.mean(data))
+            std = float(np.std(data))
+        except:
+            return {'mean': 0, 'std': 0, 'trend_slope': 0, 'autocorr': 0}
+        
+        # 检查有效性
+        if not (np.isfinite(mean) and np.isfinite(std)):
+            return {'mean': 0, 'std': 0, 'trend_slope': 0, 'autocorr': 0}
         
         # 趋势分析（线性回归斜率）
         x = np.arange(len(data))
         if len(x) > 1:
-            coeffs = np.polyfit(x, data, 1)
-            trend_slope = abs(coeffs[0]) / (abs(mean) + 1e-10)  # 相对斜率
+            try:
+                coeffs = np.polyfit(x, data, 1)
+                # 更安全的除法
+                mean_abs = abs(mean) if np.isfinite(mean) else 1e-10
+                trend_slope = abs(float(coeffs[0])) / (mean_abs + 1e-10)
+                if not np.isfinite(trend_slope):
+                    trend_slope = 0
+            except:
+                trend_slope = 0
         else:
             trend_slope = 0
         
         # 自相关分析（滞后1）
+        autocorr = 0
         if len(data) > 1:
-            data_centered = data - mean
-            autocorr = np.corrcoef(data_centered[:-1], data_centered[1:])[0, 1]
-            autocorr = 0 if np.isnan(autocorr) else abs(autocorr)
+            try:
+                data_centered = data - mean
+                autocorr = np.corrcoef(data_centered[:-1], data_centered[1:])[0, 1]
+                autocorr = 0 if not np.isfinite(autocorr) else abs(float(autocorr))
+            except:
+                autocorr = 0
         else:
             autocorr = 0
             
@@ -393,6 +415,7 @@ class ParallelXYModelSimulator:
         self.xp = np
         
         self.L = lattice_size
+        self.lattice_size = lattice_size  # 添加别名，保持向后兼容
         self.ESTEP = equilibrium_steps
         self.STEP = measurement_steps
         self.J = interaction_constant
@@ -402,8 +425,12 @@ class ParallelXYModelSimulator:
         if random_seed is not None:
             np.random.seed(random_seed)
             self.base_seed = random_seed
+            # 为直接调用的情况设置process_seed
+            self.process_seed = random_seed
         else:
             self.base_seed = int(time.time()) % 1000000
+            # 为直接调用的情况设置process_seed
+            self.process_seed = self.base_seed
         
         # 存储模拟结果
         self.results = {}
@@ -486,8 +513,29 @@ class ParallelXYModelSimulator:
         return np.cos(angle_rad), np.sin(angle_rad)
     
     def _initialize_spins(self) -> Any:
-        """初始化XY模型的自旋角度"""
+        """初始化XY模型的自旋角度 - 增强随机性版本"""
+        import random  # 只导入random，time已在全局导入
+        
+        # 添加额外的随机扰动，确保每次初始化都不同
+        if hasattr(self, 'process_seed') and self.process_seed is not None:
+            # 使用当前微秒时间戳和任务ID增强随机性
+            time_based_seed = (int(time.time() * 1000000) % 1000000)
+            task_seed = getattr(self, 'task_id', 0) % 1000000
+            
+            # 为每次初始化生成独特的随机种子
+            init_seed = (self.process_seed + time_based_seed + task_seed) % 1000000
+            np.random.seed(init_seed)
+        
+        # 生成随机自旋配置，使用更复杂的方法增加随机性
         random_vals = self.xp.random.rand(self.L, self.L)
+        
+        # 添加额外的随机扰动
+        if hasattr(self, 'process_seed') and self.process_seed is not None:
+            # 生成小幅度的随机噪声
+            noise_level = 0.01  # 1%的随机噪声
+            noise = self.xp.random.rand(self.L, self.L) * noise_level
+            random_vals = (random_vals + noise) % 1.0  # 确保值在[0,1)范围内
+        
         spin_array = random_vals * self.two_pi
         return spin_array.copy()
     
@@ -968,21 +1016,51 @@ class ParallelXYModelSimulator:
                 susceptibility = 0.0
                 specific_heat = 0.0
             else:
-                energy_mean = float(np.mean(valid_energy))
-                magnetization_mean = float(np.mean(valid_magnetization))
+                # 安全计算均值
+                try:
+                    energy_mean = float(np.mean(valid_energy))
+                    magnetization_mean = float(np.mean(valid_magnetization))
+                except:
+                    energy_mean = 0.0
+                    magnetization_mean = 0.0
                 
+                # 检查均值有效性
+                if not (np.isfinite(energy_mean) and np.isfinite(magnetization_mean)):
+                    energy_mean = 0.0
+                    magnetization_mean = 0.0
+                
+                # 计算平方均值
                 if len(valid_energy) >= 10:
-                    energy_sq_mean = float(np.mean(valid_energy * valid_energy))
-                    mag_sq_mean = float(np.mean(valid_magnetization * valid_magnetization))
+                    try:
+                        energy_sq_mean = float(np.mean(valid_energy * valid_energy))
+                        mag_sq_mean = float(np.mean(valid_magnetization * valid_magnetization))
+                    except:
+                        energy_sq_mean = energy_mean ** 2
+                        mag_sq_mean = magnetization_mean ** 2
                 else:
                     energy_sq_mean = energy_mean ** 2
                     mag_sq_mean = magnetization_mean ** 2
                 
-                inv_temp = 1.0 / temperature
-                inv_temp_squared = inv_temp * inv_temp
+                # 检查平方均值有效性
+                if not (np.isfinite(energy_sq_mean) and np.isfinite(mag_sq_mean)):
+                    energy_sq_mean = energy_mean ** 2
+                    mag_sq_mean = magnetization_mean ** 2
                 
-                susceptibility = max(0.0, (mag_sq_mean - magnetization_mean * magnetization_mean) * inv_temp * self.l_squared)
-                specific_heat = max(0.0, (energy_sq_mean - energy_mean * energy_mean) * inv_temp_squared * self.l_squared)
+                # 安全计算温度倒数
+                try:
+                    inv_temp = 1.0 / max(temperature, 1e-10)  # 防止温度接近0
+                    inv_temp_squared = inv_temp * inv_temp
+                except:
+                    inv_temp = 0.0
+                    inv_temp_squared = 0.0
+                
+                # 计算susceptibility和specific_heat
+                try:
+                    susceptibility = max(0.0, (mag_sq_mean - magnetization_mean * magnetization_mean) * inv_temp * self.l_squared)
+                    specific_heat = max(0.0, (energy_sq_mean - energy_mean * energy_mean) * inv_temp_squared * self.l_squared)
+                except:
+                    susceptibility = 0.0
+                    specific_heat = 0.0
             
             if xy is None or not isinstance(xy, np.ndarray):
                 xy = self._initialize_spins()
@@ -1063,12 +1141,53 @@ class ProcessXYModelSimulator(ParallelXYModelSimulator):
         # 为每个进程创建独立的内存池
         self.memory_pool = UltraSmartMemoryPool(self.xp, max_arrays_per_shape=20, process_id=process_id)
 
-        # 设置进程独立的随机种子
+        # 设置进程独立的随机种子 - 增强随机性
         if random_seed is not None:
-            # 添加温度相关的随机因子
-            temp_factor = int(temperature * 10000) % 10000 if temperature is not None else 0
-            process_seed = random_seed + process_id * 10000 + temp_factor
+            # 添加多重随机因子确保完全不同的结果
+            # 不再重新导入os和time，使用全局已导入的模块
+            import random
+            
+            # 获取当前时间戳，避免多次调用time.time()
+            # 不再重新导入time，使用全局已导入的time模块
+            current_time = time.time()
+            
+            # 因子1: 基础种子
+            base_factor = random_seed
+            
+            # 因子2: 获取任务ID（如果存在）或者使用进程ID * 大质数
+            if hasattr(self, 'task_id'):
+                task_id_factor = self.task_id * 99991
+                process_factor = process_id * 9973
+            else:
+                task_id_factor = 0
+                process_factor = process_id * 99991
+            
+            # 因子3: 温度相关（但更复杂的处理）
+            temp_factor = 0
+            if temperature is not None:
+                # 使用温度的更复杂哈希函数，避免线性关系
+                temp_factor = int((temperature * 373) % 100000)
+            
+            # 因子4: 当前微秒时间戳的高位
+            time_factor = int((current_time * 1000000) % 100000)
+            
+            # 因子5: 当前操作系统进程ID的高位
+            os_factor = os.getpid() % 100000
+            
+            # 因子6: 随机额外因子 - 使用预先获取的时间戳
+            random.seed(random_seed + process_id + int(current_time * 1000) % 1000000)
+            extra_factor = random.randint(0, 999999)
+            
+            # 组合所有因子，使用质数增加随机性
+            process_seed = (
+                (base_factor * 23 + task_id_factor * 17 + process_factor * 7 + temp_factor * 13) % 1000000 +
+                (time_factor * 19 + os_factor * 11 + extra_factor * 29) % 1000000
+            ) % 1000000
+            
+            # 设置多个随机生成器的种子
             np.random.seed(process_seed)
+            random.seed(process_seed + 1000000)  # 为Python的random模块设置不同种子
+            
             self.process_seed = process_seed
         else:
             self.process_seed = None
@@ -1079,12 +1198,12 @@ def run_single_temperature_parallel(args):
     并行运行单个温度点的函数
     
     参数:
-        args: (idx, temperature, config_dict, process_id)
+        args: (idx, temperature, config_dict, process_id, task_id)
         
     返回:
         (idx, result)
     """
-    idx, temperature, config_dict, process_id = args
+    idx, temperature, config_dict, process_id, task_id = args
     
     try:
         # 为每个进程创建独立的模拟器实例
@@ -1098,6 +1217,9 @@ def run_single_temperature_parallel(args):
             process_id=process_id,
             temperature=temperature
         )
+        
+        # 设置任务ID，增加随机性
+        simulator.task_id = task_id
 
         # 运行单个温度点
         result = simulator._run_temperature_ultra_optimized(temperature)
@@ -1213,8 +1335,24 @@ class ParallelXYModelSimulator(ParallelXYModelSimulator):
             'use_gpu': self.use_gpu
         }
         
-        tasks = [(idx, temp, config_dict, idx) 
-                for idx, temp in enumerate(temperature_array)]
+        # 为每次运行生成唯一运行ID，确保即使同时运行多个脚本也不同
+        # 不再重新导入os和time，使用全局已导入的模块
+        run_id = int((time.time() * 1000 + os.getpid() * 100) % 1000000)
+        
+        # 创建增强随机性的任务
+        import random
+        # 使用基础种子设置随机性，但添加额外变化
+        base_seed_for_tasks = self.base_seed + run_id
+        random.seed(base_seed_for_tasks)
+        
+        # 为每个温度点添加额外的随机偏移
+        tasks = []
+        for idx, temp in enumerate(temperature_array):
+            # 为每个温度点生成独特的随机偏移
+            task_specific_offset = random.randint(0, 999999)
+            # 确保每个任务都有唯一的ID组合
+            task_id = (idx * 100000 + run_id + task_specific_offset) % 1000000
+            tasks.append((idx, temp, config_dict, idx, task_id))
         
         # 使用ProcessPoolExecutor进行并行计算
         all_results = []
