@@ -1048,23 +1048,26 @@ class ProcessXYModelSimulator(ParallelXYModelSimulator):
     def __init__(self, lattice_size: int = 16, equilibrium_steps: int = 1000, 
                  measurement_steps: int = 10000, interaction_constant: float = 1.0,
                  random_seed: Optional[int] = None, use_gpu: bool = False,
-                 process_id: int = 0):
+                 process_id: int = 0, temperature: Optional[float] = None):
         """
         初始化进程专用模拟器
-        
+
         参数:
             process_id: 进程ID，用于区分不同进程
+            temperature: 温度参数，用于生成温度相关的随机因子
         """
-        super().__init__(lattice_size, equilibrium_steps, measurement_steps, 
+        super().__init__(lattice_size, equilibrium_steps, measurement_steps,
                         interaction_constant, random_seed, use_gpu, 1)  # 单进程模式
-        
+
         self.process_id = process_id
         # 为每个进程创建独立的内存池
         self.memory_pool = UltraSmartMemoryPool(self.xp, max_arrays_per_shape=20, process_id=process_id)
-        
+
         # 设置进程独立的随机种子
         if random_seed is not None:
-            process_seed = random_seed + process_id * 1000  # 使用更大的间隔
+            # 添加温度相关的随机因子
+            temp_factor = int(temperature * 10000) % 10000 if temperature is not None else 0
+            process_seed = random_seed + process_id * 10000 + temp_factor
             np.random.seed(process_seed)
             self.process_seed = process_seed
         else:
@@ -1092,9 +1095,10 @@ def run_single_temperature_parallel(args):
             interaction_constant=config_dict['interaction_constant'],
             random_seed=config_dict['random_seed'],
             use_gpu=config_dict.get('use_gpu', False),
-            process_id=process_id
+            process_id=process_id,
+            temperature=temperature
         )
-        
+
         # 运行单个温度点
         result = simulator._run_temperature_ultra_optimized(temperature)
         result['original_index'] = idx
