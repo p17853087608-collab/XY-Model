@@ -3,6 +3,7 @@
 自旋配置可视化脚本 v3.0 - 并行版本
 只处理直接包含自旋配置文件的文件夹，不处理父文件夹
 支持并行图片生成，提高处理效率
+数据格式为npy,数据结构是L*L的二维自旋角度数组(弧度,范围0-2π)
 """
 
 import os
@@ -27,74 +28,45 @@ plt.switch_backend('Agg')
 def visualize_single_spin(args: Tuple[str, np.ndarray, str, str]) -> Tuple[str, bool, str]:
     """
     单个自旋配置的可视化函数，用于并行处理
-    
+
     参数:
         args: 包含(key, spin_array, output_path, title)的元组
-        
+
     返回:
         (filename, success, error_msg)的元组
     """
     key, spin_array, output_path, title = args
     filename = os.path.basename(output_path)
-    
+
     try:
-        # 处理不同维度的自旋配置
-        if spin_array.ndim == 2:
-            # 2D角度数组
-            if spin_array.max() > 2 * np.pi:
-                # 可能是度数，转换为弧度
-                spin_array = spin_array * np.pi / 180.0
-            
-            # 映射到[0, 2π]范围
-            spin_array = spin_array % (2 * np.pi)
-            
-            # 转换为灰度图
-            grayscale = spin_array / (2 * np.pi)
-            
-            # 创建纯净图片 - 无边框、无标题、无颜色条
-            fig, ax = plt.subplots(figsize=(6, 6))
-            ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
-            
-            # 移除所有冗杂信息
-            ax.set_xticks([])
-            ax.set_yticks([])
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            ax.spines['bottom'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-            
-        elif spin_array.ndim == 3 and spin_array.shape[2] >= 2:
-            # 3D数组，可能是[cos, sin]格式
-            if spin_array.shape[2] >= 2:
-                cos_xy = spin_array[:, :, 0]
-                sin_xy = spin_array[:, :, 1]
-                
-                # 计算角度
-                angles = np.arctan2(sin_xy, cos_xy)
-                angles = (angles + 2 * np.pi) % (2 * np.pi)
-                
-                # 转换为灰度图
-                grayscale = angles / (2 * np.pi)
-                
-                fig, ax = plt.subplots(figsize=(6, 6))
-                ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
-                
-                # 移除所有冗杂信息
-                ax.set_xticks([])
-                ax.set_yticks([])
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False)
-                ax.spines['bottom'].set_visible(False)
-                ax.spines['left'].set_visible(False)
-                
-        else:
-            return (filename, False, f"不支持的数组维度: {spin_array.shape}")
-        
+        # 处理2D角度数组
+        if spin_array.max() > 2 * np.pi:
+            # 可能是度数，转换为弧度
+            spin_array = spin_array * np.pi / 180.0
+
+        # 映射到[0, 2π]范围
+        spin_array = spin_array % (2 * np.pi)
+
+        # 转换为灰度图
+        grayscale = spin_array / (2 * np.pi)
+
+        # 创建纯净图片 - 无边框、无标题、无颜色条
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
+
+        # 移除所有冗杂信息
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+
         # 保存纯净图片
         plt.savefig(output_path, dpi=150, bbox_inches='tight', pad_inches=0)
         plt.close()
         return (filename, True, "")
-        
+
     except Exception as e:
         plt.close()
         return (filename, False, str(e))
@@ -256,79 +228,49 @@ class SpinConfigurationVisualizer:
         
         return spin_data
     
-    def visualize_spin_configuration(self, spin_array: np.ndarray, output_path: str, 
+    def visualize_spin_configuration(self, spin_array: np.ndarray, output_path: str,
                                    title: str = "Spin Configuration") -> bool:
         """
         可视化单个自旋配置数组（纯净版本，无任何冗杂信息）
-        
+
         参数:
-            spin_array: 自旋配置数组
+            spin_array: 自旋配置数组（2D角度数组）
             output_path: 输出图片路径
             title: 图片标题（内部使用，不显示）
-            
+
         返回:
             是否成功生成图片
         """
         try:
-            # 处理不同维度的自旋配置
-            if spin_array.ndim == 2:
-                # 2D角度数组
-                if spin_array.max() > 2 * np.pi:
-                    # 可能是度数，转换为弧度
-                    spin_array = spin_array * np.pi / 180.0
-                
-                # 映射到[0, 2π]范围
-                spin_array = spin_array % (2 * np.pi)
-                
-                # 转换为灰度图
-                grayscale = spin_array / (2 * np.pi)
-                
-                # 创建纯净图片 - 无边框、无标题、无颜色条
-                fig, ax = plt.subplots(figsize=(6, 6))
-                ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
-                
-                # 移除所有冗杂信息
-                ax.set_xticks([])
-                ax.set_yticks([])
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False)
-                ax.spines['bottom'].set_visible(False)
-                ax.spines['left'].set_visible(False)
-                
-            elif spin_array.ndim == 3 and spin_array.shape[2] >= 2:
-                # 3D数组，可能是[cos, sin]格式
-                if spin_array.shape[2] >= 2:
-                    cos_xy = spin_array[:, :, 0]
-                    sin_xy = spin_array[:, :, 1]
-                    
-                    # 计算角度
-                    angles = np.arctan2(sin_xy, cos_xy)
-                    angles = (angles + 2 * np.pi) % (2 * np.pi)
-                    
-                    # 转换为灰度图
-                    grayscale = angles / (2 * np.pi)
-                    
-                    fig, ax = plt.subplots(figsize=(6, 6))
-                    ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
-                    
-                    # 移除所有冗杂信息
-                    ax.set_xticks([])
-                    ax.set_yticks([])
-                    ax.spines['top'].set_visible(False)
-                    ax.spines['right'].set_visible(False)
-                    ax.spines['bottom'].set_visible(False)
-                    ax.spines['left'].set_visible(False)
-                    
-            else:
-                print(f"    ✗ 不支持的数组维度: {spin_array.shape}")
-                return False
-            
+            # 处理2D角度数组
+            if spin_array.max() > 2 * np.pi:
+                # 可能是度数，转换为弧度
+                spin_array = spin_array * np.pi / 180.0
+
+            # 映射到[0, 2π]范围
+            spin_array = spin_array % (2 * np.pi)
+
+            # 转换为灰度图
+            grayscale = spin_array / (2 * np.pi)
+
+            # 创建纯净图片 - 无边框、无标题、无颜色条
+            fig, ax = plt.subplots(figsize=(6, 6))
+            ax.imshow(grayscale, origin='lower', cmap='gray', vmin=0, vmax=1)
+
+            # 移除所有冗杂信息
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+
             # 保存纯净图片
             plt.savefig(output_path, dpi=150, bbox_inches='tight', pad_inches=0)
             plt.close()
             print(f"    ✓ 生成图片: {os.path.basename(output_path)}")
             return True
-            
+
         except Exception as e:
             print(f"    ✗ 生成图片失败: {e}")
             plt.close()

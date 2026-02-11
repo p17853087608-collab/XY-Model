@@ -26,11 +26,7 @@ def load_model(model_path=r'best.pth', num_classes=2):
     
     # 加载模型参数
     try:
-        # 兼容昇腾NPU和标准PyTorch
-        if hasattr(torch, 'npu'):
-            # 昇腾环境
-            model.load_state_dict(torch.load(model_path))
-        elif torch.cuda.is_available():
+        if torch.cuda.is_available():
             # GPU环境
             model.load_state_dict(torch.load(model_path))
         else:
@@ -161,12 +157,8 @@ def predict_folder(model, folder_path, output_folder="save_data", use_tta=True):
     
     image_files.sort(key=sort_key)
     
-    # 检测昇腾NPU环境并设置推理batch size
-    if hasattr(torch, 'npu'):
-        device = torch.device("npu:0")
-        batch_size = 32  # 昇腾NPU推理优化batch size
-        print("检测到昇腾NPU，使用NPU进行推理")
-    elif torch.cuda.is_available():
+    # 检测设备并设置推理batch size
+    if torch.cuda.is_available():
         device = torch.device("cuda")
         batch_size = 64  # GPU推理batch size
         print("检测到GPU，使用GPU进行推理")
@@ -250,10 +242,8 @@ def predict_folder(model, folder_path, output_folder="save_data", use_tta=True):
                     outputs = model(batch_tensor)
                     probabilities = torch.softmax(outputs, dim=1)
                     
-                    # 根据设备类型处理张量
-                    if hasattr(torch, 'npu') and next(model.parameters()).is_npu:
-                        probabilities = probabilities.cpu()
-                    elif torch.cuda.is_available() and next(model.parameters()).is_cuda:
+                    # 将概率转移到CPU
+                    if torch.cuda.is_available() and next(model.parameters()).is_cuda:
                         probabilities = probabilities.cpu()
                     probabilities = probabilities.numpy()
                     predicted = torch.argmax(outputs, 1).cpu().numpy()
@@ -390,7 +380,6 @@ if __name__ == "__main__":
     use_tta = not args.no_tta
     
     print(f"开始预测，TTA模式: {'启用' if use_tta else '禁用'}")
-    print(f"数据增强策略: 简化版本（已移除高斯噪声、温度扰动、Mixup、CutMix）")
     
     # 执行预测
     predict_all_folders(args.base_path, args.output, use_tta)

@@ -20,10 +20,10 @@ def main():
     TEMPERATURE_MODE = "range"  # "range", "custom", "critical"
     
     # 模式1: 温度范围
-    TEMPERATURE_RANGE = (0.67,1.27)  # (最低温度, 最高温度)
-    NUM_TEMPERATURES = 60             # 温度点数量
+    TEMPERATURE_RANGE = (0.1,2.0)  # (最低温度, 最高温度)
+    NUM_TEMPERATURES = 20             # 温度点数量
     
-    # 模式2: 自定义温度点 (推荐)
+    # 模式2: 自定义温度点
     CUSTOM_TEMPERATURES = [
         0.85, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15, 1.20, 
         1.25, 1.30, 1.35, 1.40, 1.45
@@ -34,9 +34,9 @@ def main():
     CRITICAL_RANGE = 0.3     # 临界区域范围
     
     # 模拟参数
-    LATTICE_SIZE = 128                # 晶格大小 (16, 32, 64)
-    EQUILIBRIUM_STEPS = 5000         # 平衡步数
-    MEASUREMENT_STEPS = 5000          # 测量步数
+    LATTICE_SIZE = 16                # 晶格大小
+    EQUILIBRIUM_STEPS = 2000         # 平衡步数
+    MEASUREMENT_STEPS = 100          # 测量步数
     INTERACTION_CONSTANT = 1.0       # 相互作用常数
     
     # 并行计算参数
@@ -53,7 +53,6 @@ def main():
     
     # 输出设置
     SAVE_RESULTS = True               # 是否保存结果
-    GENERATE_PLOTS = False             # 是否生成图表
     VERBOSE = True                    # 是否显示详细信息
     
     # ==================== 参数设置结束 ====================
@@ -167,7 +166,7 @@ def main():
         if hasattr(simulator, 'base_output_dir'):
             print(f"\n结果已保存到:")
             print(f"  {simulator.base_output_dir}")
-            
+
             # 列出主要文件
             if os.path.exists(simulator.base_output_dir):
                 print(f"\n保存的文件:")
@@ -176,60 +175,6 @@ def main():
                     if os.path.isfile(file_path):
                         size_mb = os.path.getsize(file_path) / (1024*1024)
                         print(f"  - {file} ({size_mb:.2f} MB)")
-        
-        # 快速图表预览（如果matplotlib可用）
-        if GENERATE_PLOTS:
-            try:
-                import matplotlib.pyplot as plt
-                import matplotlib
-                matplotlib.use('Agg')  # 无显示后端
-                
-                # 创建快速预览图
-                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
-                fig.suptitle(f'XY Model Results Preview (L={LATTICE_SIZE})')
-                
-                # 磁化强度
-                ax1.plot(temps, mag, 'b-', linewidth=2)
-                ax1.set_xlabel('Temperature')
-                ax1.set_ylabel('Magnetization')
-                ax1.set_title('Magnetization vs Temperature')
-                ax1.grid(True, alpha=0.3)
-                ax1.axvline(x=tc_avg, color='r', linestyle='--', alpha=0.7, label=f'Tc≈{tc_avg:.3f}')
-                ax1.legend()
-                
-                # 磁化率和比热
-                ax2_twin = ax2.twinx()
-                line1 = ax2.plot(temps, sus, 'g-', linewidth=2, label='Susceptibility')
-                line2 = ax2_twin.plot(temps, heat, 'r-', linewidth=2, label='Specific Heat')
-                ax2.set_xlabel('Temperature')
-                ax2.set_ylabel('Susceptibility', color='g')
-                ax2_twin.set_ylabel('Specific Heat', color='r')
-                ax2.set_title('Susceptibility and Specific Heat vs Temperature')
-                ax2.grid(True, alpha=0.3)
-                
-                # 合并图例
-                lines = line1 + line2
-                labels = [l.get_label() for l in lines]
-                ax2.legend(lines, labels, loc='upper right')
-                
-                plt.tight_layout()
-                
-                # 保存预览图
-                if hasattr(simulator, 'base_output_dir'):
-                    preview_file = os.path.join(simulator.base_output_dir, "quick_preview.png")
-                    plt.savefig(preview_file, dpi=150, bbox_inches='tight')
-                    print(f"\nQuick preview: {preview_file}")
-                else:
-                    preview_file = "xy_model_preview.png"
-                    plt.savefig(preview_file, dpi=150, bbox_inches='tight')
-                    print(f"\nQuick preview: {preview_file}")
-                
-                plt.close()
-                
-            except ImportError:
-                print("\n注意: matplotlib未安装，无法生成图表")
-            except Exception as e:
-                print(f"\n生成预览图时出错: {e}")
         
     except KeyboardInterrupt:
         print("\n\n模拟被用户中断")

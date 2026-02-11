@@ -106,12 +106,8 @@ def train_val_data_process():
     train_dataset.dataset.transform = train_transform
     val_dataset.dataset.transform = val_transform
     
-    # 训练集和验证集的数据加载器 
-    if hasattr(torch, 'npu'):
-        print("昇腾NPU环境，检测到大显存，使用优化batch size")
-        train_loader = Data.DataLoader(dataset=train_dataset, batch_size=64, shuffle=True, num_workers=0)
-        val_loader = Data.DataLoader(dataset=val_dataset, batch_size=64, shuffle=False, num_workers=0)
-    elif torch.cuda.is_available():
+    # 训练集和验证集的数据加载器
+    if torch.cuda.is_available():
         print("GPU环境")
         train_loader = Data.DataLoader(dataset=train_dataset, batch_size=32, shuffle=True, num_workers=4)
         val_loader = Data.DataLoader(dataset=val_dataset, batch_size=32, shuffle=False, num_workers=4)
@@ -124,32 +120,25 @@ def train_val_data_process():
     return train_loader, val_loader
 
 # 训练模型的函数
-def train_model_process(model, train_loader, val_loader, num_epochs, use_mixup=False, mixup_alpha=0.4, 
-                        use_cutmix=False, cutmix_alpha=1.0, use_adaptive_aug=False):
-    # 检测昇腾NPU环境
-    if hasattr(torch, 'npu'):
-        device = torch.device("npu:0")
-        print("检测到昇腾NPU，使用NPU进行训练")
-    elif torch.cuda.is_available():
+def train_model_process(model, train_loader, val_loader, num_epochs, use_adaptive_aug=False):
+    # 检测设备
+    if torch.cuda.is_available():
         device = torch.device("cuda")
         print("检测到GPU，使用GPU进行训练")
     else:
         device = torch.device("cpu")
         print("使用CPU进行训练")
     
-    class_weights = torch.tensor([1.05, 1.0])  
+    class_weights = torch.tensor([1.0, 1.0])  
     if device.type == 'cuda':
         class_weights = class_weights.cuda()
-    elif device.type == 'npu':
-        class_weights = class_weights.npu()
     
     # 标准加权交叉熵损失函数
     criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
     print("✓ 使用标准加权交叉熵损失函数")
     
-    # 优化器使用Adam优化器，极低学习率以获得更精细的学习
-    # 使用更小学习率进行精细调整，确保准确学习1.15相变点
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-4)  # 更小学习率进行精细调整
+    # 优化器使用Adam优化器
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)  # 更小学习率进行精细调整
     
     # 余弦退火学习率调度器，帮助优化收敛过程
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
@@ -181,12 +170,10 @@ def train_model_process(model, train_loader, val_loader, num_epochs, use_mixup=F
     since = time.time()
 
     # 打印数据增强配置信息
-    print(f"数据增强配置（简化版本）:")
+    print(f"数据增强配置:")
     print(f"  - 几何变换: 水平翻转p=0.5, 垂直翻转p=0.5, 旋转±30°")
     print(f"  - 仿射变换: 平移±5%, 缩放0.95-1.05, 剪切±3°")
-    print(f"  - 移除功能: 高斯噪声、温度扰动、Cutout、Mixup、CutMix")
-    print(f"  - 类别权重: 有序相1.4, 非晶相1.0")
-    print(f"  - 学习率: 0.0001 (精细学习)")
+    print(f"  - 学习率: 0.01 (初始学习率)")
     print(f"  - 权重衰减: 5e-4 (正则化)")
 
     # 开始训练
@@ -223,7 +210,7 @@ def train_model_process(model, train_loader, val_loader, num_epochs, use_mixup=F
             # 标签
             y = y.to(device)
             
-            # 标准训练（不使用Mixup/CutMix）
+            # 标准训练
             outputs = model(x)
             loss = criterion(outputs, y)
             pre_lab = torch.argmax(outputs, dim=1)
@@ -239,9 +226,7 @@ def train_model_process(model, train_loader, val_loader, num_epochs, use_mixup=F
                     'loss': loss.item(),
                     'predicted': pre_lab[i].item(),
                     'actual': y[i].item(),
-                    'correct': (pre_lab[i] == y[i]).item(),
-                    'mixup_applied': use_mixup,
-                    'mixup_lambda': lam if use_mixup else 1.0
+                    'correct': (pre_lab[i] == y[i]).item()
                 })
 
             # 梯度初始化为0
@@ -294,17 +279,8 @@ def train_model_process(model, train_loader, val_loader, num_epochs, use_mixup=F
 
         # 计算训练集和验证集的loss值
         train_loss_list.append(train_loss/train_num)
-        # 对于Mixup训练，使用一个替代的准确率计算方法
-        if use_mixup and isinstance(train_corrects, int):
-            # 如果使用Mixup且train_corrects是int，使用平均准确率估计
-            train_acc = 0.5  # 默认值，Mixup时准确率计算不准确
-            if 'batch_standard_acc' in epoch_data and epoch_data['batch_standard_acc']:
-                # 使用计算出的标准准确率作为替代
-                train_acc = sum(epoch_data['batch_standard_acc']) / len(epoch_data['batch_standard_acc'])
-            train_acc_list.append(train_acc)
-        else:
-            # 标准准确率计算
-            train_acc_list.append(train_corrects.double().item()/train_num if hasattr(train_corrects, 'double') else train_corrects/train_num)
+        # 标准准确率计算
+        train_acc_list.append(train_corrects.double().item()/train_num if hasattr(train_corrects, 'double') else train_corrects/train_num)
         val_loss_list.append(val_loss/val_num)
         val_acc_list.append(val_corrects.double().item()/val_num)
         
@@ -530,34 +506,23 @@ def matplot_acc_loss(train_process, save_path="training_curves.pdf"):
     print(f"训练曲线已保存至: {os.path.abspath(save_path)}")
 
 if __name__ == "__main__":
-    if hasattr(torch, 'npu'):
-        print("当前昇腾NPU可用，使用NPU进行训练")
-        print("PyTorch版本:", torch.__version__)
-        print("NPU设备数量:", torch.npu.device_count() if hasattr(torch.npu, 'device_count') else "未知")
-    elif torch.cuda.is_available():
+    if torch.cuda.is_available():
         print("当前 GPU 名称:", torch.cuda.get_device_name())
         print("当前 GPU 索引:", torch.cuda.current_device())
     else:
-        print("当前未检测到可用 GPU 或 NPU，使用 CPU 进行训练。")
+        print("当前未检测到可用 GPU，使用 CPU 进行训练。")
     
     # 训练参数配置
     num_epochs = 20
-    use_mixup = False         # 已移除Mixup数据增强
-    mixup_alpha = 0.4         # 保留参数（未使用）
-    use_cutmix = False        # 已移除CutMix数据增强
-    cutmix_alpha = 1.0        # 保留参数（未使用）
-    use_adaptive_aug = False  # 禁用自适应增强
-    
-    print(f"\n=== 训练配置（简化数据增强） ===")
-    print(f"理论相变点: 1.15")
+    use_adaptive_aug = False
+
+    print(f"\n=== 训练配置 ===")
     print(f"训练轮数: {num_epochs}")
     print(f"数据增强策略: 简化几何变换")
-    print(f"  - 几何变换: 水平/垂直翻转、旋转、平移、缩放、剪切（减小强度）")
-    print(f"  - 移除功能: 高斯噪声、温度扰动、Cutout、Mixup、CutMix")
-    print(f"期望效果: 减少过度增强，保持数据原始特征")
+    print(f"  - 几何变换: 水平/垂直翻转、旋转、平移、缩放、剪切")
     print(f"========================================\n")
-    
+
     train_loader, val_loader = train_val_data_process()
     model = ResNet1(block=Residual, num_classes=2, in_channels=1)
-    train_process = train_model_process(model, train_loader, val_loader, num_epochs, use_mixup, mixup_alpha, use_cutmix, cutmix_alpha, use_adaptive_aug)
+    train_process = train_model_process(model, train_loader, val_loader, num_epochs, use_adaptive_aug)
     matplot_acc_loss(train_process)

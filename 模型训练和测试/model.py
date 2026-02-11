@@ -76,11 +76,8 @@ class ResNet1(nn.Module):
         return x
 
 if __name__ == "__main__":
-    # 检测昇腾NPU环境
-    if hasattr(torch, 'npu'):
-        device = torch.device("npu:0")
-        print("使用昇腾NPU")
-    elif torch.cuda.is_available():
+    # 检测设备
+    if torch.cuda.is_available():
         device = torch.device("cuda")
         print("使用GPU")
     else:

@@ -1,6 +1,0 @@
-export PYTHONUNBUFFERED=1
-sbatch --begin=now+1minutes
-sleep 10
-source ~/miniconda3/bin/activate
-conda activate xymodel
-python test.py

@@ -45,11 +45,10 @@ def extract_random_number_from_path(filepath):
 def determine_phase_by_temperature_start(temperature):
     """
     根据温度判断相类型
-    对于2D Ising模型，临界温度约为2.269
-    温度大于2.269: Amorphous phase (无序相)
-    温度小于等于2.269: Ordered phase (有序相)
+    温度大于1.0: Amorphous phase (无序相)
+    温度小于等于1.0: Ordered phase (有序相)
     """
-    critical_temperature = 2.269
+    critical_temperature = 1.0
     if temperature > critical_temperature:
         return "Amorphous phase"
     else:
