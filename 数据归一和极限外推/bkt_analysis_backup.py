@@ -1,5 +1,5 @@
 """
-BKT相变温度分析 - 修正版 V2
+BKT相变温度分析 
 对每个温度点执行Bootstrap,计算均值和标准差
 从Bootstrap均值曲线找50%概率点
 """
@@ -57,12 +57,12 @@ data_info = {
         'raw_data_path': 'd:/LX/绘图数据/64x64'
     },
     '128': {
-        'path': 'd:/LX/绘图数据/128x128/save_data/overall_summary.csv',
+        'path': 'd:/LX/绘图数据/128x128/overall_summary.csv',
         'L': 128,
         'raw_data_path': 'd:/LX/绘图数据/128x128'
     },
     '256': {
-        'path': 'd:/LX/绘图数据/256x256/save_data/overall_summary.csv',
+        'path': 'd:/LX/绘图数据/256x256/overall_summary.csv',
         'L': 256,
         'raw_data_path': 'd:/LX/绘图数据/256x256'
     }
