@@ -46,9 +46,7 @@ d:/GPU--Version/
 
 ### 2. 深度学习模型
 - **ResNet架构**：用于相变温度预测
-- **温度缩放校准**：优化模型预测概率
 - **GPU加速**：支持CUDA训练和推理
-- **置信度评估**：提供预测置信度分析
 
 ### 3. 数据分析与可视化
 - **相变识别**：自动识别有序相和无序相
@@ -92,14 +90,14 @@ python xy_simulator.py
 
 ```bash
 cd 模型训练和测试
-python model_train.py --data-path ../数据处理和可视化/ --epochs 100 --batch-size 64
+python model_train.py
 ```
 
 ### 3. 预测分析
 
 ```bash
 cd 模型训练和测试
-python predict.py --model best_model.pth --input ../数据处理和可视化/
+python predict.py --base_path ../数据处理和可视化/test/ --output save_data/
 ```
 
 ### 4. 数据可视化

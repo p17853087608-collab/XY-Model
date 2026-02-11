@@ -14,8 +14,8 @@ except ImportError:
         if desc:
             print(f"{desc}")
         return iterable
-from model_clean import ResNet1
-from model_clean import Residual
+from model import ResNet1
+from model import Residual
 
 
 
@@ -357,7 +357,7 @@ def predict_all_folders(base_path=r'16x16_data_set\test', output_folder="save_da
         overall_df = pd.DataFrame(all_stats)
         overall_df.to_csv(overall_stats_file, index=False)
         print(f"\n所有文件夹预测完成！总体统计保存到: {overall_stats_file}")
-        
+
         # 打印总体统计
         print(f"\n总体统计:")
         print(f"  - 处理文件夹数量: {len(all_stats)}")
@@ -368,18 +368,17 @@ def predict_all_folders(base_path=r'16x16_data_set\test', output_folder="save_da
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description='图像分类预测')
     parser.add_argument('--no-tta', action='store_true', help='禁用测试时数据增强(TTA)')
-    parser.add_argument('--no-confidence-boost', action='store_true', default=True, help='禁用置信度增强功能')
     parser.add_argument('--base_path', type=str, default=r'16x16_data_set\test', help='测试数据路径')
     parser.add_argument('--output', type=str, default="save_data", help='输出文件夹')
-    
+
     args = parser.parse_args()
-    
+
     use_tta = not args.no_tta
-    
+
     print(f"开始预测，TTA模式: {'启用' if use_tta else '禁用'}")
-    
+
     # 执行预测
     predict_all_folders(args.base_path, args.output, use_tta)

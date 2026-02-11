@@ -19,7 +19,7 @@ def run_training():
 
     try:
         result = subprocess.run(
-            [sys.executable, 'model_train_clean.py'],
+            [sys.executable, 'model_train.py'],
             check=True,
             capture_output=False,
             encoding=None
@@ -41,7 +41,7 @@ def run_prediction():
 
     try:
         result = subprocess.run(
-            [sys.executable, 'predict_clean.py', '--no-tta'],
+            [sys.executable, 'predict.py', '--no-tta'],
             check=True,
             capture_output=False,
             encoding=None

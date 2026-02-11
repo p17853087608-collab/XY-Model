@@ -54,7 +54,7 @@ d:/GPU--Version/
 - **Multiple Algorithm Implementations**: Includes various Monte Carlo step algorithms, such as ultra-optimized, traditional, and vectorized versions.
 - **Result Visualization**: Supports saving and visualizing spin configurations as images.
 - **Data Persistence**: Enables saving and loading of simulation results.
-- **Deep Learning Integration**: ResNet-based phase transition temperature prediction with temperature scaling calibration.
+- **Deep Learning Integration**: ResNet-based phase transition temperature prediction.
 - **Scale Analysis**: BKT phase transition temperature extrapolation with confidence intervals.
 - **Auto Training**: Simplified automated training workflow.
 
@@ -91,14 +91,14 @@ python xy_simulator.py
 
 ```bash
 cd 模型训练和测试
-python model_train.py --data-path ../数据处理和可视化/ --epochs 100 --batch-size 64
+python model_train.py
 ```
 
 ### 3. Prediction Analysis
 
 ```bash
 cd 模型训练和测试
-python predict.py --model best_model.pth --input ../数据处理和可视化/
+python predict.py --base_path ../数据处理和可视化/test/ --output save_data/
 ```
 
 ### 4. Data Visualization
@@ -117,9 +117,7 @@ python bkt_main.py
 
 ## Project Results
 
-- Successfully trained and calibrated ResNet model
-- Temperature scaling parameter T=0.6739
-- Phase transition temperature at 50% probability: 1.092K, error 0.122K
+- Successfully trained ResNet model for phase transition temperature prediction
 - Parallel computing speedup up to 3.8x (4 cores)
 
 ## Contribution Guidelines

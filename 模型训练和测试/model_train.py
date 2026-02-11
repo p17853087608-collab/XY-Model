@@ -6,8 +6,8 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 import torch.utils.data as Data
 import matplotlib.pyplot as plt
-from model_clean import ResNet1
-from model_clean import Residual
+from model import ResNet1
+from model import Residual
 import torch
 import pandas as pd
 import numpy as np
