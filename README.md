@@ -9,26 +9,36 @@
 ```
 d:/GPU--Version/
 ├── 数据模拟和生成/          # XY模型数据生成
-│   ├── xy_model_simulator_parallel.py    # 并行模拟器
-│   ├── run_xy_parallel.py                # 启动脚本
-│   └── README_Parallel.md               # 详细文档
+│   ├── xy_simulator.py                    # XY模型模拟器核心
+│   ├── xy_simulator_core.py               # 模拟器核心类
+│   ├── xy_model_simulator_parallel.py     # 并行模拟器
+│   ├── xy_parallel.py                     # 并行启动脚本
+│   ├── xy_utils.py                        # 工具函数
+│   └── test.py                             # 测试脚本
 ├── 模型训练和测试/          # 深度学习模型训练与预测
-│   ├── model_clean.py                      # ResNet模型定义
-│   ├── model_train_clean.py                # 训练脚本
-│   ├── predict_clean.py                    # 预测脚本
-│   └── data_analyzer_clean.py              # 数据分析
+│   ├── model.py                            # ResNet模型定义
+│   ├── model_train.py                      # 训练脚本
+│   ├── predict.py                          # 预测脚本
+│   └── plot_probability.py                 # 概率曲线绘制
 ├── 数据处理和可视化/          # 数据可视化与相变分析
 │   ├── xy_model_PhaseData_analysis.py      # 相变数据分析
 │   ├── generate_spin_visualizations.py     # 自旋可视化
 │   └── classify_png_images.py              # 图片分类
 ├── 数据归一和极限外推/          # 尺度分析与外推
-│   └── 尺度归一和绘图/BKT相变温度外推分析.py
-└── 科研绘图/                # 论文级绘图
+│   ├── bkt_main.py                         # BKT分析主程序
+│   ├── bkt_core.py                         # BKT核心分析
+│   ├── bkt_analysis.py                     # BKT分析
+│   ├── bkt_plotting.py                     # BKT绘图
+│   └── plot_magnetization_comparison.py    # 磁化强度对比
+└── 补充/                    # 辅助工具
+    ├── auto_train.py                       # 自动训练脚本
+    └── analyze_susceptibility.py           # 磁化率分析
 ```
 
 ## 功能特性
 
 ### 1. 数据模拟
+- **核心模拟器**：基于XY模型的自旋系统模拟
 - **并行计算优化**：支持多核并行计算，显著提升模拟效率
 - **Swendsen-Wang算法**：高效的蒙特卡洛算法
 - **内存优化**：智能内存池管理，减少内存分配开销
@@ -50,6 +60,11 @@ d:/GPU--Version/
 - **BKT相变温度外推**：尺度归一分析
 - **置信区间估计**：95% CI计算
 - **极限外推**：预测无限系统的相变温度
+- **磁化强度分析**：不同尺度的磁化行为对比
+
+### 5. 辅助工具
+- **自动训练**：简化训练流程的自动化脚本
+- **磁化率分析**：精确分析系统磁化率变化
 
 ## 安装依赖
 
@@ -61,7 +76,7 @@ pip install numpy matplotlib scipy tqdm
 pip install torch torchvision
 
 # 可选依赖
-pip install psutil scikit-learn
+pip install psutil scikit-learn statsmodels
 ```
 
 ## 快速开始
@@ -70,21 +85,21 @@ pip install psutil scikit-learn
 
 ```bash
 cd 数据模拟和生成
-python run_xy_parallel.py --lattice-size 32 --temperatures 20 --processes 4
+python xy_simulator.py
 ```
 
 ### 2. 模型训练
 
 ```bash
 cd 模型训练和测试
-python model_train_clean.py --data-path ../数据处理和可视化/ --epochs 100 --batch-size 64
+python model_train.py --data-path ../数据处理和可视化/ --epochs 100 --batch-size 64
 ```
 
 ### 3. 预测分析
 
 ```bash
 cd 模型训练和测试
-python predict_clean.py --model best_calibrated_with_temp.pth --input ../数据处理和可视化/相变3/
+python predict.py --model best_model.pth --input ../数据处理和可视化/
 ```
 
 ### 4. 数据可视化
@@ -96,16 +111,7 @@ python xy_model_PhaseData_analysis.py
 
 ## 详细文档
 
-- [并行模拟器文档](数据模拟和生成/README_Parallel.md)
-- [技术原理文档](数据模拟和生成/原版/XY模型模拟器技术原理文档.md)
-- [操作文档](数据模拟和生成/原版/XY模型模拟器操作文档.md)
-
-## 项目成果
-
-- 成功训练并校准ResNet模型
-- 温度缩放参数 T=0.6739
-- 50%概率对应的相变温度为 1.092K，误差 0.122K
-- 并行计算加速比可达 3.8x（4核）
+项目各模块包含详细注释和使用说明，请参考各目录下的Python脚本文件头部注释。
 
 ## 许可证
 
