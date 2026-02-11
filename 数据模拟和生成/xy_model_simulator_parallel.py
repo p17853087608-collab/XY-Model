@@ -1282,6 +1282,7 @@ class ParallelXYModelSimulator(ParallelXYModelSimulator):
                  num_processes: int = 4):
         super().__init__(lattice_size, equilibrium_steps, measurement_steps, 
                         interaction_constant, random_seed, use_gpu, num_processes)
+        self.lattice_size = lattice_size
     
     def run_parallel_simulation(self, temperature_range: Tuple[float, float] = (0.1, 2.5), 
                                num_temperatures: int = 10) -> Dict[str, Any]:
