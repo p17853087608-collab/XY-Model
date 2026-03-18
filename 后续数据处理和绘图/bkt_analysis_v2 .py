@@ -16,6 +16,9 @@ import os
 import sys
 from io import StringIO
 import warnings
+import pickle
+import json
+from datetime import datetime
 warnings.filterwarnings('ignore')
 
 # 设置字体（根据绘图标准：Source Serif Variable）
@@ -27,7 +30,7 @@ matplotlib.rcParams['ps.fonttype'] = 42
 
 # 设置绘图标准（基于双栏600pt宽度）
 # 双栏图：600pt ≈ 8英寸 (72pt/inch)
-DPI = 100
+DPI = 600
 DOUBLE_COL_WIDTH = 8.0  # 英寸
 SINGLE_COL_WIDTH = 4.0  # 英寸
 
@@ -467,6 +470,10 @@ def plot_figure_2a(temps_dict, prob_mean_ordered_dict, prob_std_ordered_dict,
                      frameon=False)
 
     plt.tight_layout(pad=0.2, w_pad=0.1)
+    
+    # 设置固定的坐标轴框位置，确保与图2b一致
+    # [left, bottom, width, height] (相对坐标0-1)
+    ax.set_position([0.06, 0.15, 0.84, 0.75])
 
     output_path = os.path.join(OUTPUT_DIR, 'figure_2a_bootstrap_means.pdf')
     plt.savefig(output_path, format='pdf', bbox_inches='tight', facecolor='white')
@@ -566,13 +573,18 @@ def plot_figure_2b(temps_dict, prob_mean_ordered_dict, prob_std_ordered_dict,
     ax.tick_params(axis='y', which='minor', length=2, width=0.5, direction='in', labelleft=False)
     ax.tick_params(axis='x', which='minor', length=2, width=0.5, direction='in', labelbottom=False)
 
+    # 坐标轴边框 - 与图2a一致
+    for spine in ax.spines.values():
+        spine.set_edgecolor('#333333')
+        spine.set_linewidth(0.6)
+
     # 添加垂直线标记x=a处(P=0.5)
     ax.axvline(x=a, color='gray', linestyle=':', linewidth=1.0, alpha=0.7)
 
     # 插铺图：图3 (BKT拟合) 放在图2b内部右侧（原图例位置）
     if L_fit is not None and y_fit is not None and tc_std is not None:
         # 创建插铺图 [left, bottom, width, height] (相对坐标0-1)
-        ax_inset = ax.inset_axes([0.70, 0.30, 0.26, 0.40])
+        ax_inset = ax.inset_axes([0.73, 0.30, 0.26, 0.40])
 
         # 绘制数据点
         ax_inset.plot(L_fit, y_fit, 'o', markersize=3,
@@ -622,6 +634,10 @@ def plot_figure_2b(temps_dict, prob_mean_ordered_dict, prob_std_ordered_dict,
             spine.set_linewidth(0.6)
 
     plt.tight_layout(pad=0.2, w_pad=0.1)
+    
+    # 设置固定的坐标轴框位置，确保与图2a一致
+    # [left, bottom, width, height] (相对坐标0-1)
+    ax.set_position([0.06, 0.15, 0.84, 0.75])
 
     output_path = os.path.join(OUTPUT_DIR, 'figure_2b_scaled_curves.pdf')
     plt.savefig(output_path, format='pdf', bbox_inches='tight', facecolor='white')
@@ -756,10 +772,9 @@ def plot_figure_4(temps_dict, prob_mean_ordered_dict, prob_std_ordered_dict, tc_
     ax.axhline(y=0.5, color='#333333', linestyle='--', linewidth=1.5, alpha=0.7, zorder=0)
 
     ax.set_xlabel('$T$ (K)', fontsize=9)
-    ax.set_ylabel('Ordered Phase Probability', fontsize=9)
+    ax.set_ylabel('Probability', fontsize=9)
     ax.tick_params(axis='both', labelsize=9, direction='in')
     ax.set_ylim(0.3, 0.7)
-    ax.set_yticks([0.30, 0.40, 0.50, 0.60, 0.70])
 
     # 横坐标划分为4个区间
     all_temps = []
@@ -774,18 +789,23 @@ def plot_figure_4(temps_dict, prob_mean_ordered_dict, prob_std_ordered_dict, tc_
     # x轴刻度: 4个区间 (左下限, 左1/3, 右1/3, 右上限)
     x_ticks = [x_min, x_min + (x_max - x_min)/3, x_max - (x_max - x_min)/3, x_max]
     ax.set_xticks(x_ticks)
-    ax.set_xticks(np.arange(x_min, x_max + 0.01, (x_max - x_min)/20), minor=True)
     ax.set_xticklabels([f'{t:.2f}' for t in x_ticks])
 
-    # 添加横纵坐标小刻度
-    y_step = 0.04
-    ax.set_yticks(np.arange(0.30, 0.71, y_step), minor=True)
-    ax.tick_params(axis='both', which='minor', length=2, width=0.5, direction='in', labelleft=False, labelbottom=False)
+    # 启用x轴小刻度,在大刻度之间均匀分布
+    from matplotlib.ticker import AutoMinorLocator
+    ax.xaxis.set_minor_locator(AutoMinorLocator(4))  # 每个主区间分为4等分
+    ax.tick_params(axis='x', which='minor', length=2, width=0.5, direction='in', labelbottom=False)
 
-    legend = ax.legend(loc='center right', bbox_to_anchor=(0.98, 0.8), fontsize=7, frameon=True,
-                     framealpha=0.95, fancybox=True, borderpad=0.5)
-    legend.get_frame().set_edgecolor('#333333')
-    legend.get_frame().set_linewidth(0.8)
+    # 设置纵坐标主刻度和标签
+    y_major_ticks = [0.30, 0.40, 0.50, 0.60, 0.70]
+    ax.set_yticks(y_major_ticks)
+    ax.set_yticklabels([f'{t:.2f}' for t in y_major_ticks])
+
+    # 启用y轴小刻度,在大刻度之间均匀分布
+    ax.yaxis.set_minor_locator(AutoMinorLocator(4))  # 每个主区间分为4等分
+    ax.tick_params(axis='y', which='minor', length=2, width=0.5, direction='in', labelleft=False)
+
+    legend = ax.legend(loc='center right', bbox_to_anchor=(0.98, 0.8), fontsize=7, frameon=False)
 
     plt.tight_layout(pad=0.4)
 
@@ -910,7 +930,7 @@ def plot_figure_5(tc_bootstrap_dict, T_BKT, figure_6_axes_pos=None):
     from matplotlib.lines import Line2D
     legend_elements = [
         Line2D([0], [0], color='#0D47A1', linewidth=1.2, label='Bootstrap $T_c(L)$'),
-        Line2D([0], [0], color='#D32F2F', marker='s', linestyle='--', linewidth=1.2,
+        Line2D([0], [0], color='#D32F2F', marker='s', linestyle='-', linewidth=1.2,
                 markersize=4, label='$\\chi$ Peak $T_{peak}(L)$')
     ]
     ax.legend(handles=legend_elements, loc='best', fontsize=7, frameon=False)
@@ -940,6 +960,11 @@ def plot_figure_5(tc_bootstrap_dict, T_BKT, figure_6_axes_pos=None):
 
     # 添加纵坐标小刻度
     ax.tick_params(axis='both', which='minor', length=2, width=0.5, direction='in', labelleft=False, labelbottom=False)
+
+    # 坐标轴边框
+    for spine in ax.spines.values():
+        spine.set_edgecolor('#333333')
+        spine.set_linewidth(0.6)
 
     # 使用图6的坐标轴框位置，确保坐标轴框宽高一致
     if figure_6_axes_pos is not None:
@@ -1060,10 +1085,16 @@ def plot_magnetization_comparison(tc_bootstrap_dict, figure_5_axes_pos=None):
 
     # 添加x轴小刻度
     ax.tick_params(axis='x', which='minor', length=2, width=0.5, direction='in', labelbottom=False)
+
+    # 坐标轴边框
+    for spine in ax.spines.values():
+        spine.set_edgecolor('#333333')
+        spine.set_linewidth(0.6)
+
     min_chi = min([data['chi'][data['chi'] > 0].min() for data in data_dict.values()])
     ax.set_ylim(min_chi * 0.5, max(all_chi) * 1.5)
 
-    # 添加图例
+    # 添加图例 - 原有图例 + 图2a的图例(下方靠右)
     from matplotlib.lines import Line2D
     # L=64的颜色是colors[2] = '#42A5F5'
     star_marker = Line2D([0], [0], marker='*', markersize=10, color='#42A5F5',
@@ -1071,16 +1102,45 @@ def plot_magnetization_comparison(tc_bootstrap_dict, figure_5_axes_pos=None):
     diamond_marker = Line2D([0], [0], marker='D', markersize=6, color='#42A5F5',
                             markeredgecolor='black', markeredgewidth=1.0, fillstyle='none', linestyle='None')
 
-    legend_upper = ax.legend([diamond_marker, star_marker], ['Bootstrap $T_c(L)$', '$\\chi_{peak}$'],
-                             loc='upper right', fontsize=7, ncol=1, frameon=False)
+    # 菱形图例 - 位置不变
+    legend_diamond = ax.legend([diamond_marker], ['Bootstrap $T_c(L)$'],
+                               loc='upper right', bbox_to_anchor=(0.99, 1.0),
+                               fontsize=7, ncol=1, frameon=False)
+    # 添加菱形图例到坐标轴中
+    ax.add_artist(legend_diamond)
+
+    # 五角星图例 - 位于L图例上方,x坐标0.99
+    legend_star = ax.legend([star_marker], ['$\\chi_{peak}$'],
+                            loc='center right', bbox_to_anchor=(0.99, 0.85),
+                            fontsize=7, ncol=1, frameon=False)
+    # 添加五角星图例到坐标轴中
+    ax.add_artist(legend_star)
+
+    # 第二行图例: 图2a的图例内容(L=16, 32, 64, 128, 256)
+    colors_ordered = ['#64B5F6', '#42A5F5', '#1976D2', '#1565C0', '#0D47A1']
+    legend_lines = []
+    for i, L in enumerate([16, 32, 64, 128, 256]):
+        line = Line2D([0], [0], color=colors_ordered[i], marker='o', markersize=3,
+                      linestyle='-', linewidth=1.2, fillstyle='none',
+                      markeredgecolor=colors_ordered[i], markeredgewidth=0.8, label=f'L={L}')
+        legend_lines.append(line)
+
+    # 使用bbox_to_anchor精确控制位置: 放在右侧,在X_peak图例下方
+    # x坐标设置为1.0,y坐标调到0.65
+    legend_lower = ax.legend(legend_lines, [f'L={L}' for L in [16, 32, 64, 128, 256]],
+                             loc='center right', bbox_to_anchor=(1.0, 0.65),
+                             fontsize=7, ncol=1, frameon=False)
+
+    # 添加第三个图例到坐标轴中
+    ax.add_artist(legend_lower)
 
     # 设置纵坐标标签
     ax.set_ylabel('$\\chi$', fontsize=9, labelpad=10)
 
     output_path = os.path.join(OUTPUT_DIR, 'figure_6_magnetization_comparison.pdf')
-    plt.savefig(output_path, format='pdf', bbox_inches='tight', facecolor='white')
+    plt.savefig(output_path, format='pdf', bbox_inches='tight', bbox_extra_artists=[legend_diamond, legend_star, legend_lower], facecolor='white')
     plt.savefig(os.path.join(OUTPUT_DIR, 'figure_6_magnetization_comparison.tiff'),
-                format='tiff', dpi=600, bbox_inches='tight', facecolor='white')
+                format='tiff', dpi=600, bbox_inches='tight', bbox_extra_artists=[legend_diamond, legend_star, legend_lower], facecolor='white')
     print(f"Saved: {output_path}")
 
     # 获取并保存图6的坐标轴框位置
@@ -1089,6 +1149,158 @@ def plot_magnetization_comparison(tc_bootstrap_dict, figure_5_axes_pos=None):
     plt.close()
 
     return figure_6_axes_pos
+
+# ============== 数据保存函数 ==============
+def save_all_data(temps_dict, prob_mean_ordered_dict, prob_std_ordered_dict,
+                   prob_mean_amorphous_dict, prob_std_amorphous_dict,
+                   tc_bootstrap_dict, tc_from_means, T_BKT, a, b, L_fit, y_fit,
+                   chi2_reduced, timestamp_str):
+    """
+    保存所有得到的数据到文件
+    包括: 原始数据、中间结果、拟合参数等
+    """
+    # 创建数据子目录
+    data_save_dir = os.path.join(OUTPUT_DIR, 'saved_data')
+    os.makedirs(data_save_dir, exist_ok=True)
+
+    print(f"\n[数据保存] 正在保存所有数据到 {data_save_dir}...")
+
+    # 1. 保存完整数据字典 (pickle格式 - 保留所有Python对象)
+    all_data = {
+        'timestamp': timestamp_str,
+        'temps_dict': temps_dict,
+        'prob_mean_ordered_dict': prob_mean_ordered_dict,
+        'prob_std_ordered_dict': prob_std_ordered_dict,
+        'prob_mean_amorphous_dict': prob_mean_amorphous_dict,
+        'prob_std_amorphous_dict': prob_std_amorphous_dict,
+        'tc_bootstrap_dict': tc_bootstrap_dict,
+        'tc_from_means': tc_from_means,
+        'T_BKT': T_BKT,
+        'a': a,
+        'b': b,
+        'L_fit': L_fit,
+        'y_fit': y_fit,
+        'chi2_reduced': chi2_reduced
+    }
+
+    pickle_file = os.path.join(data_save_dir, f'all_data_{timestamp_str}.pkl')
+    with open(pickle_file, 'wb') as f:
+        pickle.dump(all_data, f, protocol=pickle.HIGHEST_PROTOCOL)
+    print(f"  已保存完整数据: {pickle_file}")
+
+    # 2. 保存为CSV格式 (方便查看和进一步分析)
+    # 合并所有尺寸的概率数据
+    combined_data = []
+    for size_key, temps in temps_dict.items():
+        L = data_info[size_key]['L']
+        for i, temp in enumerate(temps):
+            combined_data.append({
+                'L': L,
+                'T': temp,
+                'ordered_mean': prob_mean_ordered_dict[size_key][i],
+                'ordered_std': prob_std_ordered_dict[size_key][i],
+                'amorphous_mean': prob_mean_amorphous_dict[size_key][i],
+                'amorphous_std': prob_std_amorphous_dict[size_key][i]
+            })
+
+    combined_df = pd.DataFrame(combined_data)
+    csv_file = os.path.join(data_save_dir, f'combined_probabilities_{timestamp_str}.csv')
+    combined_df.to_csv(csv_file, index=False, float_format='%.6f')
+    print(f"  已保存合并概率数据: {csv_file}")
+
+    # 3. 保存T_c数据
+    tc_data = []
+    size_order = ['16', '32', '64', '128', '256']
+    for size_key in size_order:
+        if size_key in tc_bootstrap_dict:
+            L = data_info[size_key]['L']
+            tc_mean_val = np.mean(tc_bootstrap_dict[size_key])
+            tc_std_val = np.std(tc_bootstrap_dict[size_key], ddof=1)
+            tc_from_mean = tc_from_means[size_key]
+            tc_data.append({
+                'L': L,
+                'Tc_from_mean_curve': tc_from_mean,
+                'Tc_bootstrap_mean': tc_mean_val,
+                'Tc_bootstrap_std': tc_std_val,
+                'Tc_bootstrap_median': np.median(tc_bootstrap_dict[size_key]),
+                'Tc_bootstrap_q25': np.percentile(tc_bootstrap_dict[size_key], 25),
+                'Tc_bootstrap_q75': np.percentile(tc_bootstrap_dict[size_key], 75)
+            })
+
+    tc_df = pd.DataFrame(tc_data)
+    tc_csv_file = os.path.join(data_save_dir, f'Tc_data_{timestamp_str}.csv')
+    tc_df.to_csv(tc_csv_file, index=False, float_format='%.6f')
+    print(f"  已保存T_c数据: {tc_csv_file}")
+
+    # 4. 保存BKT拟合参数
+    fit_params = {
+        'T_BKT': float(T_BKT),
+        'a': float(a),
+        'b': float(b),
+        'chi2_reduced': float(chi2_reduced),
+        'equation': f'T_c(L) = {T_BKT:.6f} + {a:.6f} / [ln L + {b:.6f}*ln(ln L)]^2'
+    }
+
+    json_file = os.path.join(data_save_dir, f'BKT_fit_params_{timestamp_str}.json')
+    with open(json_file, 'w', encoding='utf-8') as f:
+        json.dump(fit_params, f, indent=2, ensure_ascii=False)
+    print(f"  已保存BKT拟合参数: {json_file}")
+
+    # 5. 保存Bootstrap采样数据 (每个尺寸的所有1000个T_c值)
+    bootstrap_samples_file = os.path.join(data_save_dir, f'bootstrap_Tc_samples_{timestamp_str}.csv')
+    bootstrap_samples_data = {}
+    for size_key in size_order:
+        if size_key in tc_bootstrap_dict:
+            L = data_info[size_key]['L']
+            bootstrap_samples_data[f'L_{L}'] = tc_bootstrap_dict[size_key]
+
+    # 转换为DataFrame (不同尺寸可能有略微不同的样本数)
+    max_length = max(len(samples) for samples in bootstrap_samples_data.values())
+    for key in bootstrap_samples_data:
+        samples = bootstrap_samples_data[key]
+        if len(samples) < max_length:
+            bootstrap_samples_data[key] = np.pad(samples, (0, max_length - len(samples)), constant_values=np.nan)
+
+    bootstrap_df = pd.DataFrame(bootstrap_samples_data)
+    bootstrap_df.to_csv(bootstrap_samples_file, index=False, float_format='%.6f')
+    print(f"  已保存Bootstrap采样数据: {bootstrap_samples_file}")
+
+    # 6. 保存拟合曲线数据 (用于重新绘图)
+    def fit_func(L, T_BKT, a, b):
+        log_L = np.log(L)
+        log_log_L = np.log(np.log(L))
+        return T_BKT + a / (log_L + b * log_log_L)**2
+
+    L_fit_line = np.linspace(min(L_fit) * 0.6, max(L_fit) * 1.4, 200)
+    y_fit_line = fit_func(L_fit_line, T_BKT, a, b)
+
+    fit_curve_data = pd.DataFrame({
+        'L': L_fit_line,
+        'T_fitted': y_fit_line
+    })
+    fit_curve_file = os.path.join(data_save_dir, f'BKT_fit_curve_{timestamp_str}.csv')
+    fit_curve_data.to_csv(fit_curve_file, index=False, float_format='%.6f')
+    print(f"  已保存BKT拟合曲线数据: {fit_curve_file}")
+
+    # 7. 保存运行配置信息
+    config_info = {
+        'timestamp': timestamp_str,
+        'N_BOOTSTRAP': N_BOOTSTRAP,
+        'sizes_analyzed': [data_info[k]['L'] for k in size_order if k in temps_dict],
+        'data_paths': {k: v['path'] for k, v in data_info.items()},
+        'fixed_T_BKT_value': 0.8929,
+        'script_version': 'V2_with_data_saving'
+    }
+
+    config_file = os.path.join(data_save_dir, f'config_{timestamp_str}.json')
+    with open(config_file, 'w', encoding='utf-8') as f:
+        json.dump(config_info, f, indent=2, ensure_ascii=False)
+    print(f"  已保存运行配置: {config_file}")
+
+    print(f"\n✓ 所有数据已成功保存到: {data_save_dir}")
+    print(f"  使用的数据保存时间戳: {timestamp_str}")
+
+    return data_save_dir
 
 # ============== 主流程 ==============
 def main():
@@ -1232,11 +1444,23 @@ def main():
     print(f"   方程: T_c(L) = {T_BKT:.4f} + {a:.4f} / [ln L + {b:.4f}*ln(ln L)]^2")
     print(f"   chi2/df = {chi2_reduced:.4f}")
 
-    # 保存结果
+    # 6. 保存所有数据
+    print("\n[步骤5] 保存所有计算数据...")
+    timestamp_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+    data_save_dir = save_all_data(
+        temps_dict, prob_mean_ordered_dict, prob_std_ordered_dict,
+        prob_mean_amorphous_dict, prob_std_amorphous_dict,
+        tc_bootstrap_dict, tc_from_means, T_BKT, a, b, L_fit, y_fit,
+        chi2_reduced, timestamp_str
+    )
+
+    # 保存结果到结果汇总文件
     results_file = os.path.join(OUTPUT_DIR, 'results_summary.txt')
     with open(results_file, 'w', encoding='utf-8') as f:
         f.write("BKT相变温度分析结果汇总 - 修正版V2\n")
         f.write("="*70 + "\n\n")
+        f.write(f"运行时间: {timestamp_str}\n")
+        f.write(f"数据保存目录: {data_save_dir}\n\n")
 
         f.write("1. 从Bootstrap均值曲线得到的T_c(L):\n")
         for size_key in size_order_all:
@@ -1258,6 +1482,15 @@ def main():
         f.write(f"\n4. 标度拟合:\n")
         f.write(f"   方程: T_c(L) = {T_BKT:.6f} + {a:.6f} / [ln L + {b:.6f}*ln(ln L)]^2\n")
         f.write(f"   chi2/df = {chi2_reduced:.6f}\n")
+
+        f.write(f"\n5. 保存的文件:\n")
+        f.write(f"   - 完整数据(pickle): all_data_{timestamp_str}.pkl\n")
+        f.write(f"   - 合并概率数据(CSV): combined_probabilities_{timestamp_str}.csv\n")
+        f.write(f"   - T_c数据(CSV): Tc_data_{timestamp_str}.csv\n")
+        f.write(f"   - BKT拟合参数(JSON): BKT_fit_params_{timestamp_str}.json\n")
+        f.write(f"   - Bootstrap采样(CSV): bootstrap_Tc_samples_{timestamp_str}.csv\n")
+        f.write(f"   - 拟合曲线(CSV): BKT_fit_curve_{timestamp_str}.csv\n")
+        f.write(f"   - 运行配置(JSON): config_{timestamp_str}.json\n")
 
     print(f"\n详细结果已保存至: {results_file}")
     print(f"所有图表已保存至: {OUTPUT_DIR}")

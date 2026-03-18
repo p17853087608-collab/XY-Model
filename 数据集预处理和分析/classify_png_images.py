@@ -3,8 +3,8 @@
 """
 PNG图片分类脚本 (版本2)
 根据温度区间起始点判断相类型，并重命名文件
-温度区间起始点大于1.0: Amorphous phase
-温度区间起始点小于等于1.0: Ordered phase
+温度区间起始点大于1.0: Disordered phase
+温度区间起始点小于等于1.0: Quasi-ordered phase
 """
 
 import os
@@ -45,14 +45,14 @@ def extract_random_number_from_path(filepath):
 def determine_phase_by_temperature_start(temperature):
     """
     根据温度判断相类型
-    温度大于1.0: Amorphous phase (无序相)
-    温度小于等于1.0: Ordered phase (有序相)
+    温度大于1.0: Disordered phase (无序相)
+    温度小于等于1.0: Quasi-ordered phase (有序相)
     """
     critical_temperature = 1.0
     if temperature > critical_temperature:
-        return "Amorphous phase"
+        return "Disordered phase"
     else:
-        return "Ordered phase"
+        return "Quasi-ordered phase"
 
 def create_new_filename(random_num, temperature, original_filename):
     """
@@ -130,7 +130,7 @@ def main():
     os.makedirs(output_base_dir, exist_ok=True)
     
     # 统计信息
-    phase_stats = {"Amorphous phase": 0, "Ordered phase": 0}
+    phase_stats = {"Disordered phase": 0, "Quasi-ordered phase": 0}
     success_count = 0
     fail_count = 0
     
@@ -153,8 +153,8 @@ def main():
     print(f"成功处理: {success_count} 个文件")
     print(f"失败: {fail_count} 个文件")
     print(f"\n相分布统计:")
-    print(f"  Amorphous phase: {phase_stats['Amorphous phase']} 个文件")
-    print(f"  Ordered phase: {phase_stats['Ordered phase']} 个文件")
+    print(f"  Disordered phase: {phase_stats['Disordered phase']} 个文件")
+    print(f"  Quasi-ordered phase: {phase_stats['Quasi-ordered phase']} 个文件")
     print(f"\n目标文件夹: {output_base_dir}")
     print(f"{'='*50}")
 
