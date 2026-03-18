@@ -7,7 +7,7 @@
 ## 项目结构
 
 ```
-d:/GPU--Version/
+d:/XY Model/
 ├── 数据模拟和生成/          # XY模型数据生成
 │   ├── xy_simulator.py                    # XY模型模拟器核心
 │   ├── xy_simulator_core.py               # 模拟器核心类
@@ -24,15 +24,14 @@ d:/GPU--Version/
 │   ├── xy_model_PhaseData_analysis.py      # 相变数据分析
 │   ├── generate_spin_visualizations.py     # 自旋可视化
 │   └── classify_png_images.py              # 图片分类
-├── 数据归一和极限外推/          # 尺度分析与外推
-│   ├── bkt_main.py                         # BKT分析主程序
-│   ├── bkt_core.py                         # BKT核心分析
-│   ├── bkt_analysis.py                     # BKT分析
-│   ├── bkt_plotting.py                     # BKT绘图
-│   └── plot_magnetization_comparison.py    # 磁化强度对比
-└── 补充/                    # 辅助工具
-    ├── auto_train.py                       # 自动训练脚本
-    └── analyze_susceptibility.py           # 磁化率分析
+├── 补充/                    # 辅助工具
+│   ├── auto_train.py                       # 自动训练脚本
+│   └── analyze_susceptibility.py           # 磁化率分析
+├── environment.yml                         # Conda 环境配置
+├── requirements.txt                        # Pip 依赖列表
+├── README.md                               # 中文说明文档
+├── README.en.md                            # 英文说明文档
+└── LICENSE                                 # MIT 许可证
 ```
 
 ## 功能特性
@@ -49,7 +48,7 @@ d:/GPU--Version/
 - **GPU加速**：支持CUDA训练和推理
 
 ### 3. 数据分析与可视化
-- **相变识别**：自动识别有序相和无序相
+- **相变识别**：自动识别准有序相（Quasi-ordered phase）和无序相（Disordered phase）
 - **自旋构型可视化**：生成高质量的相图
 - **概率曲线分析**：绘制相变概率随温度变化
 - **平滑算法**：移动平均、样条插值、LOWESS、Savitzky-Golay
@@ -64,18 +63,40 @@ d:/GPU--Version/
 - **自动训练**：简化训练流程的自动化脚本
 - **磁化率分析**：精确分析系统磁化率变化
 
-## 安装依赖
+## 环境配置
+
+### 方式一：使用 Conda（推荐）
 
 ```bash
-# 基础依赖
-pip install numpy matplotlib scipy tqdm
+# 创建 conda 环境
+conda env create -f environment.yml
 
-# 深度学习依赖
-pip install torch torchvision
-
-# 可选依赖
-pip install psutil scikit-learn statsmodels
+# 激活环境
+conda activate XYModel
 ```
+
+### 方式二：使用 pip
+
+```bash
+# 创建新的虚拟环境
+python -m venv xymodel
+source xymodel/bin/activate  # Linux/Mac
+xymodel\Scripts\activate     # Windows
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 主要依赖
+
+- Python 3.10.19
+- PyTorch 2.9.1 (CUDA 13.0)
+- numpy 2.1.2
+- matplotlib 3.10.7
+- pandas 2.3.3
+- scikit-learn 1.7.2
+- scipy 1.15.3
+- opencv-python 4.12.0.88
 
 ## 快速开始
 

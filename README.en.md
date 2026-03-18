@@ -17,7 +17,7 @@
 ## Project Structure
 
 ```
-d:/GPU--Version/
+d:/XY Model/
 ├── 数据模拟和生成/          # XY model data generation
 │   ├── xy_simulator.py                    # XY model simulator core
 │   ├── xy_simulator_core.py               # Simulator core classes
@@ -34,15 +34,14 @@ d:/GPU--Version/
 │   ├── xy_model_PhaseData_analysis.py      # Phase transition data analysis
 │   ├── generate_spin_visualizations.py     # Spin visualization
 │   └── classify_png_images.py              # Image classification
-├── 数据归一和极限外推/          # Scale analysis & extrapolation
-│   ├── bkt_main.py                         # BKT analysis main program
-│   ├── bkt_core.py                         # BKT core analysis
-│   ├── bkt_analysis.py                     # BKT analysis
-│   ├── bkt_plotting.py                     # BKT plotting
-│   └── plot_magnetization_comparison.py    # Magnetization comparison
-└── 补充/                    # Auxiliary tools
-    ├── auto_train.py                       # Auto training script
-    └── analyze_susceptibility.py           # Susceptibility analysis
+├── 补充/                    # Auxiliary tools
+│   ├── auto_train.py                       # Auto training script
+│   └── analyze_susceptibility.py           # Susceptibility analysis
+├── environment.yml                         # Conda environment configuration
+├── requirements.txt                        # Pip dependencies
+├── README.md                               # Chinese documentation
+├── README.en.md                            # English documentation
+└── LICENSE                                 # MIT License
 ```
 
 ## Features
@@ -58,25 +57,40 @@ d:/GPU--Version/
 - **Scale Analysis**: BKT phase transition temperature extrapolation with confidence intervals.
 - **Auto Training**: Simplified automated training workflow.
 
-## Installation Dependencies
+## Environment Setup
 
-Before running the project, ensure the following dependencies are installed:
-
-- `numpy`
-- `cupy` (for GPU support)
-- `scipy`
-- `matplotlib`
-- `tqdm`
-- `torch`
-- `torchvision`
-- `scikit-learn`
-- `statsmodels`
-
-Install dependencies using the following command:
+### Option 1: Using Conda (Recommended)
 
 ```bash
-pip install numpy cupy scipy matplotlib tqdm torch torchvision scikit-learn statsmodels
+# Create conda environment
+conda env create -f environment.yml
+
+# Activate environment
+conda activate XYModel
 ```
+
+### Option 2: Using pip
+
+```bash
+# Create virtual environment
+python -m venv xymodel
+source xymodel/bin/activate  # Linux/Mac
+xymodel\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Main Dependencies
+
+- Python 3.10.19
+- PyTorch 2.9.1 (CUDA 13.0)
+- numpy 2.1.2
+- matplotlib 3.10.7
+- pandas 2.3.3
+- scikit-learn 1.7.2
+- scipy 1.15.3
+- opencv-python 4.12.0.88
 
 ## Quick Start
 
@@ -119,18 +133,6 @@ python bkt_main.py
 
 - Successfully trained ResNet model for phase transition temperature prediction
 - Parallel computing speedup up to 3.8x (4 cores)
-
-## Contribution Guidelines
-
-Contributions and issues are welcome. Please submit Pull Requests or Issues on Gitee.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-## Project Homepage
-
-This project is hosted on [Gitee](https://gitee.com/Osako2529/XYModel). Visit the project page for the latest updates.
 
 ## Contribution Guidelines
 
