@@ -1,137 +1,148 @@
-# XYModel 项目 README
+# XY Model – Monte Carlo + Machine Learning
 
-## 项目简介
+This repository contains the code and data necessary to reproduce the results of our study on the XY model using Monte Carlo simulations and machine learning.
 
-`XYModel` 是一个用于模拟 XY 模型的高效计算程序，主要应用于统计物理领域。该项目集成了数据模拟、深度学习模型训练、相变分析和可视化等多种功能，适合研究相变、临界现象和二维系统的磁性行为。
+---
 
-## 项目结构
+## 📦 Repository Contents
 
+- `example_data/` – Representative example datasets and Monte Carlo simulation scripts
+  - `data_generation/` – Monte Carlo simulation scripts
+  - `original/` – Original/benchmark implementations
+  - `parallel_simulation_results_*/` – Example simulation output data
+- `training/` – Deep learning model training scripts
+  - `model.py` – ResNet model definition
+  - `model_train.py` – Training script
+  - `predict.py` – Prediction script
+  - `plot_probability.py` – Probability curve plotting
+- `analysis/` – Bootstrap analysis, finite-size scaling (FSS), and figure generation
+  - `processed_data/` – Processed data used to generate the main figures
+    - `fig2/`, `fig3/`, `fig4/` – Data for specific figures
+- `data_preprocessing/` – Data preprocessing and spin visualization
+  - `generate_spin_visualizations.py` – Spin configuration visualization
+  - `classify_png_images.py` – Image classification utilities
+  - `xy_model_PhaseData_analysis.py` – Phase transition data analysis
+- `model_weights/` – Trained model weights for different lattice sizes
+  - `8x8/`, `16x16/`, `32x32/`, `64x64/`, `128x128/`, `256x256/`
+- `supplementary/` – Auxiliary tools
+  - `auto_train.py` – Automated training script
+  - `analyze_susceptibility.py` – Susceptibility analysis
+
+---
+
+## 📊 Data Availability
+
+Due to their large size (tens of GB), the full raw Monte Carlo simulation datasets are **not included** in this repository.
+
+To ensure reproducibility, we provide:
+- All scripts required to generate the data (see `example_data/data_generation/`)
+- Representative example datasets (see `example_data/` and `analysis/processed_data/`)
+- Trained model weights (see `model_weights/`)
+
+The example datasets are intended to illustrate the data format and usage.
+The full datasets can be regenerated using the provided scripts.
+
+If needed, the complete raw datasets are available from the authors upon reasonable request.
+
+---
+
+## 🚀 Reproducibility Guide
+
+### 1. Generate Monte Carlo data
+```bash
+cd example_data/data_generation
+python xy_parallel.py
 ```
-d:/XY Model/
-├── 数据模拟和生成/          # XY模型数据生成
-│   ├── xy_simulator.py                    # XY模型模拟器核心
-│   ├── xy_simulator_core.py               # 模拟器核心类
-│   ├── xy_model_simulator_parallel.py     # 并行模拟器
-│   ├── xy_parallel.py                     # 并行启动脚本
-│   ├── xy_utils.py                        # 工具函数
-│   └── test.py                             # 测试脚本
-├── 模型训练和测试/          # 深度学习模型训练与预测
-│   ├── model.py                            # ResNet模型定义
-│   ├── model_train.py                      # 训练脚本
-│   ├── predict.py                          # 预测脚本
-│   └── plot_probability.py                 # 概率曲线绘制
-├── 数据处理和可视化/          # 数据可视化与相变分析
-│   ├── xy_model_PhaseData_analysis.py      # 相变数据分析
-│   ├── generate_spin_visualizations.py     # 自旋可视化
-│   └── classify_png_images.py              # 图片分类
-├── 补充/                    # 辅助工具
-│   ├── auto_train.py                       # 自动训练脚本
-│   └── analyze_susceptibility.py           # 磁化率分析
-├── environment.yml                         # Conda 环境配置
-├── requirements.txt                        # Pip 依赖列表
-├── README.md                               # 中文说明文档
-├── README.en.md                            # 英文说明文档
-└── LICENSE                                 # MIT 许可证
+
+### 2. Train the model
+```bash
+cd training
+python model_train.py
 ```
 
-## 功能特性
+### 3. Perform bootstrap analysis
+```bash
+cd analysis
+python bkt_analysis_v2.py
+```
 
-### 1. 数据模拟
-- **核心模拟器**：基于XY模型的自旋系统模拟
-- **并行计算优化**：支持多核并行计算，显著提升模拟效率
-- **Swendsen-Wang算法**：高效的蒙特卡洛算法
-- **内存优化**：智能内存池管理，减少内存分配开销
-- **多种物理量**：计算能量、磁化强度、旋涡数等
+### 4. Generate figures
+```bash
+cd data_preprocessing
+python generate_spin_visualizations.py
+```
 
-### 2. 深度学习模型
-- **ResNet架构**：用于相变温度预测
-- **GPU加速**：支持CUDA训练和推理
+---
 
-### 3. 数据分析与可视化
-- **相变识别**：自动识别准有序相（Quasi-ordered phase）和无序相（Disordered phase）
-- **自旋构型可视化**：生成高质量的相图
-- **概率曲线分析**：绘制相变概率随温度变化
-- **平滑算法**：移动平均、样条插值、LOWESS、Savitzky-Golay
+## 🧪 Quick Start (using example data)
 
-### 4. 尺度分析
-- **BKT相变温度外推**：尺度归一分析
-- **置信区间估计**：95% CI计算
-- **极限外推**：预测无限系统的相变温度
-- **磁化强度分析**：不同尺度的磁化行为对比
+If you do not want to regenerate the full dataset, use the provided example data in `example_data/` and `analysis/processed_data/`.
 
-### 5. 辅助工具
-- **自动训练**：简化训练流程的自动化脚本
-- **磁化率分析**：精确分析系统磁化率变化
+---
 
-## 环境配置
+## 🧾 Data Format
 
-### 方式一：使用 Conda（推荐）
+The example datasets in `example_data/` demonstrate the structure of the simulation outputs.
+Each dataset includes:
+
+* Configuration data (`.npy` spin configuration files)
+* Observables
+* Labels (if applicable)
+
+Refer to comments in the scripts for detailed format descriptions.
+
+---
+
+## 📌 Notes
+
+* Running full simulations may require significant computational time and storage.
+* Results in the paper were obtained using large-scale datasets (tens of GB).
+
+---
+
+## 🔗 Repository
+
+[https://github.com/p17853087608-collab/XY-Model](https://github.com/p17853087608-collab/XY-Model)
+
+---
+
+## Environment Setup
+
+### Option 1: Using Conda (Recommended)
 
 ```bash
-# 创建 conda 环境
+# Create conda environment
 conda env create -f environment.yml
 
-# 激活环境
+# Activate environment
 conda activate XYModel
 ```
 
-### 方式二：使用 pip
+### Option 2: Using pip
 
 ```bash
-# 创建新的虚拟环境
+# Create virtual environment
 python -m venv xymodel
 source xymodel/bin/activate  # Linux/Mac
 xymodel\Scripts\activate     # Windows
 
-# 安装依赖
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 主要依赖
+### Main Dependencies
 
-- Python 3.10.19
-- PyTorch 2.9.1 (CUDA 13.0)
-- numpy 2.1.2
-- matplotlib 3.10.7
-- pandas 2.3.3
-- scikit-learn 1.7.2
-- scipy 1.15.3
-- opencv-python 4.12.0.88
+- Python 3.10+
+- PyTorch 2.x
+- numpy
+- matplotlib
+- pandas
+- scikit-learn
+- scipy
+- opencv-python
 
-## 快速开始
+---
 
-### 1. 数据模拟
+## License
 
-```bash
-cd 数据模拟和生成
-python xy_simulator.py
-```
-
-### 2. 模型训练
-
-```bash
-cd 模型训练和测试
-python model_train.py
-```
-
-### 3. 预测分析
-
-```bash
-cd 模型训练和测试
-python predict.py --base_path ../数据处理和可视化/test/ --output save_data/
-```
-
-### 4. 数据可视化
-
-```bash
-cd 数据处理和可视化
-python xy_model_PhaseData_analysis.py
-```
-
-## 详细文档
-
-项目各模块包含详细注释和使用说明，请参考各目录下的Python脚本文件头部注释。
-
-## 许可证
-
-本项目采用MIT许可证，详见LICENSE文件。
+This project is licensed under the MIT License. See the LICENSE file for details.
